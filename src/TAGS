@@ -1,0 +1,23 @@
+
+auxkerns.f,598
+      subroutine resest(resest51,2587
+      subroutine kernel(kernel129,4662
+      subroutine kernp(kernp170,6229
+      subroutine kernfa(kernfa212,7839
+      subroutine kernfp(kernfp401,13261
+      subroutine dreg(dreg602,19023
+      subroutine lreg(lreg656,20719
+      subroutine freg(freg772,24055
+      subroutine kerncl(kerncl855,26965
+      subroutine smo(smo948,29727
+      subroutine kerncp(kerncp1027,31890
+      subroutine smop(smop1116,34525
+      subroutine coffi(coffi1197,36716
+      subroutine coffb(coffb1274,38454
+      subroutine coff(coff1425,43379
+
+glkerns.f,38
+      subroutine glkerns(glkerns1,0
+
+lokerns.f,38
+      subroutine lokerns(lokerns1,0

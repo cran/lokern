@@ -1,4 +1,4 @@
-      subroutine glkerns(t,x,n,tt,m,nue,kord,ihom,irnd,
+      subroutine glkerns(t,x,n,tt,m,nue,kord,ihetero,irnd,
      .     ismo,m1,tl,tu,s,sig,wn,w1,b,y)
 c----------------------------------------------------------------------*
 c-----------------------------------------------------------------------
@@ -8,56 +8,73 @@ c       Purpose:
 c
 c       General subroutine for kernel smoothing:
 c       Computation of iterative plug-in algorithm for global bandwidth
-c       selection for kernels with 
+c       selection for kernels with
 c       (nue,kord) = (0,2), (0,4), (1,3) or (2,4).
 c-----------------------------------------------------------------------
-c  used subroutines: coff, resest, kernel with further subroutines
+c  used subroutines: constV, resest, kernel with further subroutines
 c-----------------------------------------------------------------------
-      implicit double precision (a-h,o-z)
-      dimension x(n),t(n),tt(m),y(m),wn(0:n,5),s(0:n)
-      dimension w1(m1,3)
-      dimension bias(2,0:2),vark(2,0:2),fak2(2:4)
+c Args
+      integer n, m, nue,kord, ihetero,irnd,ismo, m1
+      double precision t(n),x(n), tt(m),y(m), tl,tu, s(0:n), sig
+      double precision wn(0:n,5),w1(m1,3),b
+c Var
+      logical hetero,isrand,smo, inputs, needsrt
+      integer nyg, i,ii,iil,itt,il,iu,itende,it, j,
+     1  kk,kk2, nn
+      double precision bias(2,0:2),vark(2,0:2),fak2(2:4),
+     1     rvar, s0,sn, b2,bmin,bmax,bres,bs,alpha,ex,exs,exsvi,
+     2     r2,snr,vi,ssi,const,fac, q,tll,tuu, xi,xmy2
 c-
-c-------- 1. initialisations 
+c-------- 1. initialisations
       data bias/.2,.04762,.4286,.1515,1.33,.6293/
       data vark/.6,1.250,2.143,11.93,35.0,381.6/
       data fak2/4.,36.,576./
-
       nyg=0
-      inputs=0
-c
+      inputs = .false.
+      hetero = ihetero .ne. 0
+      isrand = irnd .ne. 0
+      smo = ismo .ne. 0
+
+c Stop for invalid inputs (impossible when called from R's lokerns())
+
+c     0 <= nue <= 4;  nue <= 2 if(! smo)
       if(nue.gt.4.or.nue.lt.0) stop
-      if(nue.gt.2.and.ismo.eq.0) stop
+      if(nue.gt.2.and. .not.smo) stop
       if(n.le.2) stop
       if(m.lt.1) stop
       if(m1.lt.3) stop
-      kk=(kord-nue)/2 
-      if(2*kk+nue.ne.kord) kord=nue+2
-      if(kord.gt.4.and.ismo.eq.0) kord=nue+2
+
+c     kord - nue must be even :
+      kk=(kord-nue)/2
+      if(2*kk+nue.ne.kord)         kord=nue+2
+      if(kord.gt.4.and. .not.smo)  kord=nue+2
       if(kord.gt.6.or.kord.le.nue) kord=nue+2
-      if(ismo.ne.0.and.b.le.0) ismo=0
+      if(smo.and.b.le.0) smo=.false.
       rvar=sig
+
+      il=1
+      iu=n
 c-
-c-------- 2. computation of s-sequence 
+c-------- 2. computation of s-sequence
       s0=1.5*t(1)-0.5*t(2)
       sn=1.5*t(n)-0.5*t(n-1)
       if(s(n).le.s(0)) then
-         inputs=1
+         inputs= .true.
          do 20 i=1,n-1
             s(i)=.5*(t(i)+t(i+1))
  20      continue
          s(0)=s0
          s(n)=sn
-         if(ismo.ne.0.and.irnd.ne.0) goto 160
+         if(smo.and. .not.isrand) goto 160
       else
-         if(ismo.ne.0) goto 160
+         if(smo) goto 160
       end if
 c-
 c-------- 3. computation of minimal, maximal allowed bandwidth
       bmax=(sn-s0)*.5
       bmin=(sn-s0)/dble(n)*dble(kord-1)*.6
 c-
-c-------- 4. compute tl,tu 
+c-------- 4. compute tl,tu
       itt=0
 40    if (tu.le.tl) then
         tl=.933*s0+.067*sn
@@ -67,9 +84,7 @@ c-------- 4. compute tl,tu
       tl=max(s0,tl)
       tu=min(sn,tu)
 c-
-c-------- 5. compute indices 
-      il=1
-      iu=n
+c-------- 5. compute indices
       wn(1,1)=0.0
       wn(n,1)=0.0
       do 50 i=1,n
@@ -89,7 +104,7 @@ c-------- 5. compute indices
         goto 40
       end if
 c-
-c-------- 6. compute t-grid for integral approximation 
+c-------- 6. compute t-grid for integral approximation
       do 60 i=1,m1
          w1(i,2)=1.0
          w1(i,1)=tl+(tu-tl)*dble(i-1)/dble(m1-1)
@@ -111,13 +126,13 @@ c-------- 7. calculation of weight function
          xi=(w1(i,1)-tl)/alpha/(tu-tl)
          if(xi.gt.1) goto 75
          w1(i,2)=(10.0-15*xi+6*xi*xi)*xi*xi*xi
- 74   continue 
+ 74   continue
  75   do 76 i=m1,1,-1
          xi=(tu-w1(i,1))/alpha/(tu-tl)
          if(xi.gt.1) goto 77
          w1(i,2)=(10.0-15*xi+6*xi*xi)*xi*xi*xi
- 76   continue 
- 77   continue 
+ 76   continue
+ 77   continue
 c-
 c-------- 8. compute constants for iteration
       ex=1./dble(kord+kord+1)
@@ -126,29 +141,29 @@ c-------- 8. compute constants for iteration
 c-
 c-------- 9. estimating variance and smoothed pseudoresiduals
       rvar=sig
-      if((sig.le..0).and.(ihom.eq.0)) 
+      if(sig.le..0 .and. .not.hetero)
      .     call resest(t(il),x(il),nn,wn(il,2),r2,sig)
-      if(ihom.ne.0) then 
+      if(hetero) then
          call resest(t,x,n,wn(1,2),snr,sig)
          bres=max(bmin,.2*nn**(-.2)*(s(iu)-s(il-1)))
          do 91 i=1,n
             wn(i,3)=t(i)
             wn(i,2)=wn(i,2)*wn(i,2)
- 91      continue 
+ 91      continue
          call kernel(t,wn(1,2),n,bres,0,kk2,nyg,s,
      .        wn(il,3),nn,wn(il,4))
       else
-         call coff(wn(1,4),n,sig)
+         call constV(wn(1,4),n,sig)
       end if
 c-
 c-------- 10. [LOOP:] estimate/compute integral constant
 100   vi=0.
       do 101 i=il,iu
-         vi=vi+ wn(i,1)*n*(s(i)-s(i-1))**2 * wn(i,4)       
+         vi=vi+ wn(i,1)*n*(s(i)-s(i-1))**2 * wn(i,4)
  101  continue
-c- 
+c-
 c-------- 11. refinement of s-sequence for random design
-      if(inputs.eq.1.and.irnd.eq.0) then
+      if(inputs .and. isrand) then
         do 110 i=0,n
           wn(i,5)=dble(i)/dble(n+1)
           wn(i,2)=(dble(i)+.5)/dble(n+1)
@@ -158,19 +173,19 @@ c-------- 11. refinement of s-sequence for random design
         exsvi=dble(kord)     / dble(6*kord+3)
         bs=0.1*(vi/(sn-s0)**2)**exsvi * n**exs
         call kernel(wn(1,5),t,n,bs,0,2,nyg,wn(0,3),wn(0,2),n+1,s(0))
-        isort=0
+        needsrt=.false.
         vi=0.0
 111     do 112 i=1,n
-           vi=vi+wn(i,1)*n*(s(i)-s(i-1))**2*wn(i,4)       
+           vi=vi+wn(i,1)*n*(s(i)-s(i-1))**2*wn(i,4)
            if(s(i).lt.s(i-1)) then
               ssi=s(i-1)
               s(i-1)=s(i)
               s(i)=ssi
-              isort=1
+              needsrt=.true.
            end if
  112    continue
-        if(isort.eq.1) goto 111
-        if(ismo.ne.0) goto 160
+        if(needsrt) goto 111
+        if(smo) goto 160
       end if
       b=bmin*2.
 c-
@@ -199,15 +214,15 @@ c-------- 15. finish of iterations
         b=(const/xmy2)**ex
         b=max(bmin,b)
         b=min(bmax,b)
-120     continue
-c-
-c-------- 16  compute smoothed function with plug-in bandwidth
+120   continue
+
+c-------- 16  compute smoothed function with global plug-in bandwidth
 160   call kernel(t,x,n,b,nue,kord,nyg,s,tt,m,y)
 c-
-c-------- 17. variance check 
+c-------- 17. variance check
       irnd=1-irnd
-      if(ihom.ne.0) sig=rvar
-      if(rvar.eq.sig.or.r2.lt..88.or.ihom.ne.0.or.nue.gt.0) return
+      if(hetero) sig=rvar
+      if(hetero.or. r2.lt.0.88 .or. nue.gt.0) return
       ii=0
       iil=0
       j=2
@@ -232,6 +247,8 @@ c-------- 17. variance check
       if(q.le.2.) return
       if(q.gt.5..and.r2.gt..95) rvar=rvar*.5
       sig=rvar
-      call coff(wn(1,4),n,sig)
+      call constV(wn(1,4),n,sig)
       goto 100
+c     -------- end loop
       end
+

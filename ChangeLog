@@ -1,3 +1,27 @@
+2001-12-14  Martin Maechler  <maechler@stat.math.ethz.ch>
+
+	* DESCRIPTION (Version): 1.0-2  release for R 1.4.0
+
+2001-08-18  Martin Maechler  <maechler@stat.math.ethz.ch>
+
+	* man/lokerns.Rd: API change --- Arguments  hetero / is.rand
+
+	* R/glkerns.R: and
+	* R/lokerns.R: Ensure that `stop' will be called in R, not in Fortran
+	        More argument checking; don't allow silly combinations anymore
+
+	* src/lokerns.f (lokerns): cosmetics, some from glkerns.f
+
+2001-07-09  Martin Maechler  <maechler@stat.math.ethz.ch>
+
+	* R/varNPreg.R (varNPreg): New; interface to Fortran's `resest()'
+
+	* src/glkerns.f (glkerns),
+	  src/lokerns.f (lokerns): declare everything (as for `implicit none')
+
+	* src/auxkerns.f (constVec): better name than coff()
+		Make all work with `implicit none'.
+
 2001-06-13  Martin Maechler  <maechler@stat.math.ethz.ch>
 
 	* DESCRIPTION (Package): Version 1.0-1  - submitted to CRAN
@@ -7,12 +31,12 @@
 	* man/xSim.Rd: made accessible as  data(xSim)
 
 	* tests/* : Newly added.
-	
+
 2001-06-08  Martin Maechler  <maechler@stat.math.ethz.ch>
-	
+
 	* DESCRIPTION (Package): Version 1.0-0 {waiting for release}
 
 	* TODO-MM: new internal file (part of)
-	* .Rbuildignore: 
+	* .Rbuildignore:
 
 
