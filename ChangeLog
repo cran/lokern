@@ -1,3 +1,9 @@
+2002-07-03  Martin Maechler  <maechler@stat.math.ethz.ch>
+
+	* DESCRIPTION (Version): 1.0-3  --> CRAN
+
+	* man/glkerns.Rd: s/T/TRUE/, s/F/FALSE/
+
 2001-12-14  Martin Maechler  <maechler@stat.math.ethz.ch>
 
 	* DESCRIPTION (Version): 1.0-2  release for R 1.4.0
