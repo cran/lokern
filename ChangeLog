@@ -1,0 +1,18 @@
+2001-06-13  Martin Maechler  <maechler@stat.math.ethz.ch>
+
+	* DESCRIPTION (Package): Version 1.0-1  - submitted to CRAN
+
+	* man/(gl|lo)kerns.Rd : Extended/Improved the examples.
+	* data/xSim.R: The simulated data from the original documenation
+	* man/xSim.Rd: made accessible as  data(xSim)
+
+	* tests/* : Newly added.
+	
+2001-06-08  Martin Maechler  <maechler@stat.math.ethz.ch>
+	
+	* DESCRIPTION (Package): Version 1.0-0 {waiting for release}
+
+	* TODO-MM: new internal file (part of)
+	* .Rbuildignore: 
+
+
