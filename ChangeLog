@@ -1,3 +1,17 @@
+2003-11-04  Martin Maechler  <maechler@stat.math.ethz.ch>
+
+	* DESCRIPTION (Version, Date): 1.0-4
+
+	* R/varest.R (varest): add PACKAGE to .Fortran() call
+	* R/varNPreg.R (varNPreg): <ditto>
+
+	* R/lokerns.R (lokerns): error message; white space; no return(a,b,..)
+	* R/glkerns.R (glkerns):  <ditto>
+
+	* man/lokerns.Rd: codoc fixes (default argument names)
+	* man/glkerns.Rd: <ditto>
+	* man/lokerns.Rd: all references *are* in glkerns.Rd
+
 2002-07-03  Martin Maechler  <maechler@stat.math.ethz.ch>
 
 	* DESCRIPTION (Version): 1.0-3  --> CRAN

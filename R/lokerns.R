@@ -1,10 +1,10 @@
-## lokerns   kernel regression smoothing with local bandwidth selection
+### lokerns   kernel regression smoothing with local bandwidth selection
 
 lokerns <- function(x, y, deriv = 0, n.out = 300, x.out = NULL,
-                    korder = deriv + 2, hetero = FALSE, is.rand = TRUE,
-                    inputb = !is.null(bandwidth), m1 = 400,
-                    xl = NULL, xu = NULL, s = NULL, sig = NULL,
-                    bandwidth = NULL)
+		    korder = deriv + 2, hetero = FALSE, is.rand = TRUE,
+		    inputb = is.numeric(bandwidth) && bandwidth > 0,
+		    m1 = 400, xl = NULL, xu = NULL, s = NULL, sig = NULL,
+		    bandwidth = NULL)
 {
     ## control and sort inputgrid x  and data y
     n <- length(x)
@@ -26,9 +26,9 @@ lokerns <- function(x, y, deriv = 0, n.out = 300, x.out = NULL,
 
     if(n.out == 0) stop("Must have `n.out' >= 1")
 
-    ## hetero 	homo- or heteroszedasticity of error variables
-    ## is.rand     random or non-random t-grid
-    ## inputb 	input bandwidth or estimation of plug-in bandwidth
+    ## hetero	homo- or heteroszedasticity of error variables
+    ## is.rand	random or non-random t-grid
+    ## inputb	input bandwidth or estimation of plug-in bandwidth
 
     ## m1 : discretization for integral functional estimation
     if ((m1 <- as.integer(m1)) < 3)# was "10", but fortran has 3
@@ -53,7 +53,7 @@ lokerns <- function(x, y, deriv = 0, n.out = 300, x.out = NULL,
         bandwidth <- double(n.out)
         if(inputb) stop("NULL bandwidth must have inputb = FALSE")
     } else if(length(bandwidth) != n.out)
-        stop("`bandwidth' has wrong length")
+        stop("`bandwidth' must be of length `n.out', i.e., ", n.out)
 
     ## deriv          derivative of regression function to be estimated
     ## korder         kernel order
@@ -88,10 +88,10 @@ lokerns <- function(x, y, deriv = 0, n.out = 300, x.out = NULL,
                     PACKAGE = "lokern"
                     )
     if(res$korder != korder)
-        warning(paste("`korder' set to ", res$korder,", internally"))
+	warning(paste("`korder' set to ", res$korder,", internally"))
 
-    return(x = x, y = y, bandwidth = res$bandwidth, x.out = x.out,
-           est = res$est, sig = res$sig,
-           deriv = res$deriv, korder = res$korder,
-           xl = res$xl, xu = res$xu, s = res$s)
+    list(x = x, y = y, bandwidth = res$bandwidth, x.out = x.out,
+	 est = res$est, sig = res$sig,
+	 deriv = res$deriv, korder = res$korder,
+	 xl = res$xl, xu = res$xu, s = res$s)
 }
