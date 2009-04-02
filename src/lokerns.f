@@ -1,5 +1,5 @@
-      subroutine lokerns(t,x,n,tt,m,nue,kord,ihetero,irnd,
-     .     ismo,m1,tl,tu,s,sig,wn,w1, wm,ban, y)
+      subroutine lokerns(t,x,tt,n,m,nue,kord, hetero,isrand,
+     .     smo,m1,tl,tu,s,sig,wn,w1, wm,ban, y)
 c----------------------------------------------------------------------*
 c-----------------------------------------------------------------------
 c       Short-version: January 1997
@@ -14,28 +14,26 @@ c-----------------------------------------------------------------------
 c  used subroutines: constV, resest, kernel with further subroutines
 c-----------------------------------------------------------------------
 c Args
-      integer n, m, nue,kord, ihetero,irnd,ismo, m1
-      double precision t(n),x(n), tt(m), s(0:n)
-      double precision tl,tu,sig
+      integer n, m, nue,kord
+      double precision t(n),x(n), tt(m), tl,tu, s(0:n), sig
+      logical hetero, isrand, smo
+      integer m1
       double precision wn(0:n,5), w1(m1,3), wm(m),ban(m), y(m)
 c Var
-      logical hetero, isrand, smo, inputs, needsrt
+      logical inputs, needsrt
       integer nyg, i,ii,iil,itt,il,iu,itende,it, j,
-     1  kk,kk2, kordv, nn, nuev,nyl
+     1     kk,kk2, kordv, nn, nuev,nyl
       double precision bias(2,0:2),vark(2,0:2),fak2(2:4),
      1     rvar, s0,sn, b,b2,bmin,bmax,bres,bvar,bs,alpha,ex,exs,exsvi,
      2     r2,snr,vi,ssi,const,fac, g1,g2,dist, q,tll,tuu, wstep,
      3     xi,xh,xxh,xmy2
 c-
 c-------- 1. initialisations
-      data bias/.2,.04762,.4286,.1515,1.33,.6293/
-      data vark/.6,1.250,2.143,11.93,35.0,381.6/
+      data bias/.2, .04762, .4286, .1515, 1.33, .6293/
+      data vark/.6,  1.250, 2.143, 11.93, 35.0, 381.6/
       data fak2/4.,36.,576./
       nyg=0
       inputs = .false.
-      hetero = ihetero .ne. 0
-      isrand = irnd .ne. 0
-      smo = ismo .ne. 0
 
 c Stop for invalid inputs (impossible when called from R's lokerns())
 
@@ -52,7 +50,7 @@ c     kord - nue must be even :
       if(kord.gt.4 .and. .not.smo)   kord=nue+2
       if(kord.gt.6 .or. kord.le.nue) kord=nue+2
       rvar=sig
-c-
+
 c-------- 2. computation of s-sequence
       s0=1.5*t(1)-0.5*t(2)
       sn=1.5*t(n)-0.5*t(n-1)
@@ -88,8 +86,8 @@ c-------- 5. compute indices
       wn(1,1)=0.0
       wn(n,1)=0.0
       do 50 i=1,n
-        if(t(i).le.tl.or.t(i).ge.tu) wn(i,1)=0.0
-        if(t(i).gt.tl.and.t(i).lt.tu) wn(i,1)=1.0
+        if(t(i).le.tl .or.  t(i).ge.tu) wn(i,1)=0.0
+        if(t(i).gt.tl .and. t(i).lt.tu) wn(i,1)=1.0
         if(t(i).lt.tl) il=i+1
         if(t(i).le.tu) iu=i
  50   continue
@@ -147,8 +145,9 @@ c-------- 9. estimating variance and smoothed pseudoresiduals
         call resest(t,x,n,wn(1,2),snr,sig)
         bres=max(bmin,.2*nn**(-.2)*(s(iu)-s(il-1)))
         do 91 i=1,n
-          wn(i,3)=t(i)
-91        wn(i,2)=wn(i,2)*wn(i,2)
+           wn(i,3)=t(i)
+           wn(i,2)=wn(i,2)*wn(i,2)
+ 91     continue
         call kernel(t,wn(1,2),n,bres,0,kk2,nyg,s, wn(1,3),n,wn(1,4))
       else
 c       not hetero
@@ -172,9 +171,10 @@ c-------- 11. refinement of s-sequence for random design
         exsvi=dble(kord)     / dble(6*kord+3)
         bs=0.1*(vi/(sn-s0)**2)**exsvi * n**exs
         call kernel(wn(1,5),t,n,bs,0,2,nyg,wn(0,3),wn(0,2),n+1,s(0))
-        needsrt=.false.
+
         vi=0.0
-111     do 112 i=1,n
+111     needsrt=.false.
+        do 112 i=1,n
            vi=vi+wn(i,1)*n*(s(i)-s(i-1))**2*wn(i,4)
            if(s(i).lt.s(i-1)) then
               ssi=s(i-1)
@@ -216,7 +216,7 @@ c-------- 15. finish of iterations
 120   continue
 
 c-------- 16  compute smoothed function with global plug-in bandwidth
-160   call kernel(t,x,n,b,nue,kord,nyg,s,tt,m,y)
+      call kernel(t,x,n,b,nue,kord,nyg,s,tt,m,y)
 c-
 c-------- 17. variance check
       if(hetero) sig=rvar
@@ -235,16 +235,18 @@ c-------- 17. variance check
             if(j.le.m) goto 171
          end if
          wn(ii,3)=x(i)-y(j)+(y(j)-y(j-1))*(tt(j)-t(i))/(tt(j)-tt(j-1))
-170    continue
+ 170  continue
       if(iil.eq.0.or.ii-iil.lt.10) then
-        call resest(t(il),wn(1,3),nn,wn(1,4),snr,rvar)
+         call resest(t(il),wn(1,3),nn,wn(1,4),snr,rvar)
       else
-        call resest(t(iil),wn(1,3),ii,wn(1,4),snr,rvar)
+         call resest(t(iil),wn(1,3),ii,wn(1,4),snr,rvar)
       end if
       q=sig/rvar
-      if(q.le.2.) call constV(wn(1,4),n,sig)
-      if(q.le.2.) goto 180
-      if(q.gt.5..and.r2.gt..95) rvar=rvar*.5
+      if(q.le.2.) then
+         call constV(wn(1,4),n,sig)
+         goto 180
+      end if
+      if(q.gt.5. .and. r2.gt..95) rvar=rvar*.5
       sig=rvar
       call constV(wn(1,4),n,sig)
       goto 100

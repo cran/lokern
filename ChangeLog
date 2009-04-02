@@ -1,3 +1,36 @@
+2009-04-02  Martin Maechler  <maechler@stat.math.ethz.ch>
+
+	* R/varNPreg.R (varest): as an alias + warning for varNPreg()
+	* man/varNPreg.Rd: ditto; varest() was *ACCIDENTAL*
+	copy of the varNPreg() function.
+
+	* man/glkerns.Rd: update or delete no-longer working URLs.
+
+	* src/glokerns.f, lokerns.f: got rid of remaining -Wall warnings
+
+2009-04-01  Martin Maechler  <maechler@stat.math.ethz.ch>
+
+	* tests/infloop-bug.R: add test against infinite loop
+
+2008-01-29  Martin Maechler  <maechler@stat.math.ethz.ch>
+
+	* R/lokerns.R, glkerns.R: use 'foo' instead of `foo'
+		(messages & comments)
+
+	* src/lokerns.f (lokerns): fix infinite loop bug, reported
+	  by Corinne Dahinden, Francesco Ferrari, and Ravi Varadhan.
+
+	* src/glkerns.f (glkerns): with 'needsrt'
+
+2007-10-09  Martin Maechler  <maechler@stat.math.ethz.ch>
+
+	* man/xSim.Rd: eliminate "\non_function"
+
+2003-11-04  Martin Maechler  <maechler@stat.math.ethz.ch>
+
+	* src/lokerns.f (lokerns): switched arg. 3 <-> 4; s/smo/inputb/
+	* src/glkerns.f (glkerns): ditto
+
 2003-11-04  Martin Maechler  <maechler@stat.math.ethz.ch>
 
 	* DESCRIPTION (Version, Date): 1.0-4

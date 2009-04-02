@@ -1,21 +1,24 @@
 ### lokerns   kernel regression smoothing with local bandwidth selection
 
-lokerns <- function(x, y, deriv = 0, n.out = 300, x.out = NULL,
+lokerns <- function(x, y=NULL, deriv = 0, n.out = 300, x.out = NULL,
 		    korder = deriv + 2, hetero = FALSE, is.rand = TRUE,
 		    inputb = is.numeric(bandwidth) && bandwidth > 0,
 		    m1 = 400, xl = NULL, xu = NULL, s = NULL, sig = NULL,
 		    bandwidth = NULL)
 {
-    ## control and sort inputgrid x  and data y
+    ## control and sort input (x,y) - new: allowing only y
+    xy <- xy.coords(x,y)
+    x <- xy$x
+    y <- xy$y
     n <- length(x)
-    if (length(y) != n)
-        stop("Input grid `x' and data `y' must have the same length.")
     if (n < 3) stop("must have n >= 3 observations")
-    sorvec <- sort.list(x)
-    x <- x[sorvec]
-    y <- y[sorvec]
+    if(is.unsorted(x)) {
+	sorvec <- sort.list(x)
+	x <- x[sorvec]
+	y <- y[sorvec]
+    }
 
-    ## compute/sort outputgrid `x.out' (n.out : length of outputgrid)
+    ## compute/sort outputgrid 'x.out' (n.out : length of outputgrid)
 
     if (is.null(x.out)) {
         n.out <- as.integer(n.out)
@@ -24,7 +27,7 @@ lokerns <- function(x, y, deriv = 0, n.out = 300, x.out = NULL,
     else
         n.out <- length(x.out <- sort(x.out))
 
-    if(n.out == 0) stop("Must have `n.out' >= 1")
+    if(n.out == 0) stop("Must have 'n.out' >= 1")
 
     ## hetero	homo- or heteroszedasticity of error variables
     ## is.rand	random or non-random t-grid
@@ -32,7 +35,7 @@ lokerns <- function(x, y, deriv = 0, n.out = 300, x.out = NULL,
 
     ## m1 : discretization for integral functional estimation
     if ((m1 <- as.integer(m1)) < 3)# was "10", but fortran has 3
-        stop("number of discretizations `m1' is too small")
+        stop("number of discretizations 'm1' is too small")
 
     ## xl, xu: lower/upper bound for integral approximation and
     ##		variance estimation
@@ -41,11 +44,10 @@ lokerns <- function(x, y, deriv = 0, n.out = 300, x.out = NULL,
         xu <- 0
     }
 
-    ## s	mid-point grid
-    if (is.null(s) || length(s) != n+1)
-        s <- as.double(rep(0, n+1))
+    ## s	mid-point grid :
+    s <- double(if(is.null(s) || length(s) != n+1)  n+1 else s)
 
-    ## sig      input variance
+    ## sig          input variance
     if (is.null(sig)) sig <- 0. #-> Fortran takes 0 = "compute default"
 
     inputb <- as.logical(inputb)
@@ -53,7 +55,7 @@ lokerns <- function(x, y, deriv = 0, n.out = 300, x.out = NULL,
         bandwidth <- double(n.out)
         if(inputb) stop("NULL bandwidth must have inputb = FALSE")
     } else if(length(bandwidth) != n.out)
-        stop("`bandwidth' must be of length `n.out', i.e., ", n.out)
+        stop("'bandwidth' must be of length 'n.out', i.e., ", n.out)
 
     ## deriv          derivative of regression function to be estimated
     ## korder         kernel order
@@ -64,17 +66,17 @@ lokerns <- function(x, y, deriv = 0, n.out = 300, x.out = NULL,
         korder <- deriv+2
 
     ## calling fortran routine
-    res <- .Fortran("lokerns",
-                    x = as.double(x),
-                    y = as.double(y),
-                    n,				# Fortran arg.names :
-                    x.out = as.double(x.out),
+    res <- .Fortran("lokerns",			# Fortran arg.names :
+                    x = as.double(x),		# t
+                    y = as.double(y),		# x
+                    x.out = as.double(x.out),	# tt
+                    as.integer(n),		# n
                     as.integer(n.out),		# m
                     deriv = as.integer(deriv),  # nue
                     korder = as.integer(korder),# kord
-                    ihetero = as.integer(hetero),# ihetero
-                    is.rand = as.integer(is.rand),# irnd
-                    as.integer(inputb),		# ismo
+                    hetero = as.logical(hetero),# hetero
+                    is.rand= as.logical(is.rand),# isrand
+                    inputb  = inputb,		# smo
                     m1,
                     xl = as.double(xl),
                     xu = as.double(xu),
@@ -86,9 +88,9 @@ lokerns <- function(x, y, deriv = 0, n.out = 300, x.out = NULL,
                     bandwidth = as.double(bandwidth),
                     est = double(n.out),
                     PACKAGE = "lokern"
-                    )
+                    )[-c(1:2, 16:18)]# all but (x,y) & work*
     if(res$korder != korder)
-	warning(paste("`korder' set to ", res$korder,", internally"))
+	warning(paste("'korder' set to ", res$korder,", internally"))
 
     list(x = x, y = y, bandwidth = res$bandwidth, x.out = x.out,
 	 est = res$est, sig = res$sig,
