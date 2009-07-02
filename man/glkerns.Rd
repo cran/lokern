@@ -32,7 +32,7 @@ glkerns(x, y, deriv = 0, n.out = 300, x.out=NULL, korder= deriv + 2,
     defaults to \code{korder = deriv+2} or \eqn{k = \nu + 2} where \eqn{k - \nu}
     must be even.  The maximal possible values are for automatic
     smoothing, \eqn{k \le 4}{k <= 4}, whereas for smoothing with input
-    bandwidth array, \eqn{k \le 6}{k <= 6}.
+    bandwidth, \eqn{k \le 6}{k <= 6}.
   }
   \item{hetero}{logical: if TRUE, heteroscedastic error variables are
     assumed for variance estimation, if FALSE the variance estimation is

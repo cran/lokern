@@ -1,4 +1,18 @@
+2009-07-02  Martin Maechler  <maechler@stat.math.ethz.ch>
+
+	* DESCRIPTION (Version): 1.0-8
+
+	* demo/glk-derivs.R (p.3glks): "testing" function showing several derivatives
+
+	* src/glkerns.f (glkerns): comments; return #{iter}
+	* R/glkerns.R (glkerns): #{plugin iterations} returned.
+
+	* tests/glk1.R: call p.3glks()
+
+
 2009-04-02  Martin Maechler  <maechler@stat.math.ethz.ch>
+
+	* DESCRIPTION (Version): 1.0-7, released to CRAN
 
 	* R/varNPreg.R (varest): as an alias + warning for varNPreg()
 	* man/varNPreg.Rd: ditto; varest() was *ACCIDENTAL*

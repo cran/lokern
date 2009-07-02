@@ -10,6 +10,7 @@ c       General subroutine for kernel smoothing:
 c       Computation of iterative plug-in algorithm for global bandwidth
 c       selection for kernels with
 c       (nue,kord) = (0,2), (0,4), (1,3) or (2,4).
+c
 c-----------------------------------------------------------------------
 c  used subroutines: constV, resest, kernel with further subroutines
 c-----------------------------------------------------------------------
@@ -17,6 +18,7 @@ c Args
       integer n, m, nue,kord
       double precision t(n),x(n), tt(m), tl,tu, s(0:n), sig
       logical hetero, isrand, smo
+c 'smo' == 'inputb' : if TRUE, *use* bandwidth 'b' given as input
       integer m1
       double precision wn(0:n,5),w1(m1,3), b, y(m)
 c Var
@@ -42,7 +44,9 @@ c     0 <= nue <= 4;  nue <= 2 if(! smo)
       if(m.lt.1) stop
       if(m1.lt.3) stop
 
-c     kord - nue must be even :
+c     kord - nue must be even  <<--- MM: *UN*desirable (want to fix kord, vary 'nue')!
+c                        ----  <<---     but a short glimpse at coff*() ./auxkerns.f
+c                                        reveals how much work would be needed to change this
       kk=(kord-nue)/2
       if(2*kk + nue .ne. kord)       kord=nue+2
       if(kord.gt.4 .and. .not.smo)   kord=nue+2
@@ -53,6 +57,7 @@ c- -Wall (erronously warning if not)
       bmin=1
       bmax=1
       ex=1
+      itende= -1
 
       il=1
       iu=n
@@ -198,7 +203,10 @@ c-------- 12. compute inflation constant and exponent and loop of iterations
      .       /(dble(2*kord-2*nue)*bias(kk,nue)**2*dble(n))
       fac=1.1*(1.+(nue/10.)+0.05*(kord-nue-2.))
      .       *n**(2./dble((2*kord+1)*(2*kord+3)))
-      itende=1+2*kord+kord*(2*kord+1)
+
+c     itende=1+2*kord+kord*(2*kord+1)
+      itende = (1 + 2*kord) * (1 + kord)
+c     ^^^^^^  *fixed* number of iterations ( <== theory !)
 
       do 120 it=1,itende
 c-
@@ -222,7 +230,8 @@ c-------- 15. finish of iterations
 
 c-------- 16  compute smoothed function with global plug-in bandwidth
 160   call kernel(t,x,n,b,nue,kord,nyg,s,tt,m,y)
-c-
+c-  return #{iter} (iff aplicable)
+      m1=itende
 c-------- 17. variance check
       irnd=1-irnd
       if(hetero) sig=rvar
