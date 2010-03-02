@@ -83,7 +83,8 @@ glkerns(x, y, deriv = 0, n.out = 300, x.out=NULL, korder= deriv + 2,
   \item{y}{vector of observations ordered with respect to x.}
   \item{bandwidth}{bandwidth which was used for kernel regression estimation.}
   \item{x.out}{vector of ordered output design points.}
-  \item{est}{vector of estimated regression function or its derivative.}
+  \item{est}{vector of estimated regression function or its derivative
+    (at \code{x.out}).}
   \item{sig}{variance estimation which was used for calculating the
     plug-in bandwidth}
   \item{deriv}{derivative of the regression function which was estimated.}

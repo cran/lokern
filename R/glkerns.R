@@ -98,7 +98,8 @@ glkerns <- function(x, y=NULL, deriv = 0, n.out = 300, x.out = NULL,
                     est = double(n.out),
                     PACKAGE = "lokern")
     if(res$korder != korder)
-	warning(gettextf("'korder' reset to %d, internally", res$korder))
+	warning(gettextf("'korder' reset from %d to %d, internally",
+			 korder, res$korder))
     if(res$iter < 0) res$iter <- NA_integer_
 
     list(x = x, y = y, bandwidth = res$bandwidth, x.out = x.out,

@@ -1,6 +1,6 @@
 
-R version 2.9.1 (2009-06-26)
-Copyright (C) 2009 The R Foundation for Statistical Computing
+R version 2.11.0 Under development (unstable) (2010-03-01 r51193)
+Copyright (C) 2010 The R Foundation for Statistical Computing
 ISBN 3-900051-07-0
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
@@ -78,9 +78,13 @@ List of 12
 +                     is.rand=FALSE, useBandwidth, bw.factor = 1.8,
 +                     col = 2, lwd = 1.5)
 + {
-+     ## Purpose: Plot  glkerns(*,  deriv = {0, 1, 2}
++     ## Purpose: Plot  glkerns(*,  deriv = {0, 1, 2})
 +     ## ----------------------------------------------------------------------
-+     ## Arguments:
++     ## Arguments: (x.dat, y.dat): the numeric data vectors
++     ##            korder : the kernel order -- automatically is diminuished by one
++     ##                     if needed to keep  'korder - deriv' an even number
++     ##            derivs : integer vectors of derivatives to compute
++     ##            useBandwidth: possibly a user specified bandwidth
 +     ## ----------------------------------------------------------------------
 +     ## Author: Martin Maechler, Date:  2 Jul 2009, 09:24
 + 
@@ -237,9 +241,9 @@ deriv = 0: modifying korder from 3 to 2
 deriv = 2: modifying korder from 3 to 2
 Warning messages:
 1: In glkerns(x.dat, y.dat, korder = korder, is.rand = is.rand) :
-  'korder' reset to 2, internally
+  'korder' reset from 3 to 2, internally
 2: In glkerns(x.dat, y.dat, korder = k0, is.rand = is.rand, bandw = bw,  :
-  'korder' reset to 4, internally
+  'korder' reset from 2 to 4, internally
 > 
 > p.3glks(tt, xSim, kord = 4, useB = 0.15)
 deriv = 1: modifying korder from 4 to 3
