@@ -1,0 +1,34 @@
+  o Now both lokerns() and glkerns()  do return class()ed results which
+    have  print(), residuals(), ... methods.
+
+    Both now also use
+    	sfsmisc::seqXtend() {-> sfsmisc:roundfixS() }
+	    --> dependency on  sfsmisc
+	        [[Alternative:  Write small paper on  seqXtend() & roundfixS()
+                    and move these to  utils ]]
+
+   TODO: Check that residuals() and fitted() also work when x[] is *NOT* sorted
+
+  o The Fortran-algorithm  in parts heavily relies on   t_i < t_{i+1}
+    When we have *duplicated* x's  [or "nearly-duplicated" ones which may
+    be even more subtle ! --- there maybe numerical problems that we should
+    deal with.
+    The smooth.spline() - like solution requires an algorithm that works
+    with *weights*  ... and that maybe much too much work, needing more
+    theoretical work, first !
+
+  o Both functions now return lists almost identical;
+    this is nice and useful.
+
+    plot(): see the extensive  lokerns() and glkerns() examples.
+    {think about "deriv" !}
+
+  o The 2 man pages look very similar;  ``clean up''
+
+  o User [R.V.]: glkerns() and lokerns() should return an object for which I can
+    predict(*,  deriv = d,...)  {d = 0, 1, 2, ..}
+    		^^^^^^^^^     .. however that would require that
+      "nu - k" := deriv - korder  could be non-even etc
+    --> Would need more "research"; see comment in src/glkerns.f
+
+  o Move the nice plots in tests/glk1.R  to a demo() !!
