@@ -1,0 +1,164 @@
+
+R version 2.15.2 (2012-10-26) -- "Trick or Treat"
+Copyright (C) 2012 The R Foundation for Statistical Computing
+ISBN 3-900051-07-0
+Platform: x86_64-w64-mingw32/x64 (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> require(lokern)
+Loading required package: lokern
+> data(xSim)
+> n <- length(xSim)
+> stopifnot(n == 75)
+> tt <- ((1:n) - 1/2)/n # equidistant x
+> 
+> (gk <- glkerns(tt, xSim))
+Call:
+glkerns(x = tt, y = xSim)
+List of 23
+ $ x         : num [1:75] 0.006666667 0.02 0.033333333 0.046666667 0.06 ...
+ $ y         : num [1:75] 1.9666 1.9 1.6449 1.4275 2.4 1.8487 1.3383 1.9514 1.5722 1.1978 ...
+ $ x.out     : num [1:300] 0.006666667 0.011032448 0.01539823 0.019764012 0.02 ...
+ $ est       : num [1:300] 1.867502 1.860786 1.85407 1.847354 1.846991 ...
+ $ nobs      : int 75
+ $ n.out     : int 300
+ $ deriv     : int 0
+ $ korder    : int 2
+ $ hetero    : logi FALSE
+ $ is.rand   : logi TRUE
+ $ inputb    : logi FALSE
+ $ iter      : int 15
+ $ xl        : num 0.067
+ $ xu        : num 0.933
+ $ s         : num [1:76] 0.004117607 0.013333333 0.026666667 0.04 0.053333333 ...
+ $ sig       : num 0.1451065
+ $ bandwidth : num 0.04845241
+ $ ind.x     : int [1:75] 1 5 9 13 17 21 25 29 33 37 ...
+ $ seqXmethod: chr "aim"
+ $ m1        : int 400
+ $ isOrd     : logi TRUE
+ $ ord       : NULL
+ $ x.inOut   : logi TRUE
+> summary(gk$est)
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+-3.0680 -1.6680  0.7053  0.4094  1.7820  4.2130 
+> gk$bandwidth
+[1] 0.04845241
+> glkerns(tt,xSim, deriv = 1)$bandwidth
+[1] 0.08137163
+> glkerns(tt,xSim, deriv = 2)$bandwidth
+[1] 0.1190404
+> 
+> demo("glk-derivs")
+
+
+	demo(glk-derivs)
+	---- ~~~~~~~~~~
+
+> ## Q: Can we have *same* kernel, *same* bandwidth  with different  'deriv'
+> ##    similarly to smooth.spline() ?
+> ##
+> ## Answer: not really,  mainly because don't have enough choices
+> ##     (nu, k_{ord}), i.e., because currently,  nu - k  must be even ...
+> 
+> ## "dput(.) of simple integer vector to character :
+> myF <- function(d, A="(", O=")", B = length(d) > 1)
++     paste(if(B) A, paste(d, collapse=", "), if(B) O, sep="")
+
+> library(lokern)
+
+> p.3glks <- function(x.dat, y.dat, korder, derivs = 0:2,
++                     is.rand=FALSE, useBandwidth, bw.factor = 1.8,
++                     col = 2, lwd = 1.5)
++ {
++     ## Purpose: Plot  glkerns(*,  deriv = {0, 1, 2})
++     ## ----------------------------------------------------------------------
++     ## Arguments: (x.dat, y.dat): the numeric data vectors
++     ##            korder : the kernel order -- automatically is diminuished by one
++     ##                     if needed to keep  'korder - deriv' an even number
++     ##            derivs : integer vectors of derivatives to compute
++     ##            useBandwidth: possibly a user specified bandwidth
++     ## ----------------------------------------------------------------------
++     ## Author: Martin Maechler, Date:  2 Jul 2009, 09:24
++ 
++     if(!missing(useBandwidth) && is.numeric(useBandwidth) && useBandwidth > 0)
++         bw <- useBandwidth
++     else {
++         ## Determine the fixed bandwidth :
++         bw0 <- glkerns(x.dat, y.dat, korder=korder, is.rand=is.rand)$bandwidth
++         bw <- bw0 * bw.factor     # more smoothing for the derivatives
++     }
++ 
++     stopifnot(derivs == (d <- as.integer(derivs)), length(derivs) >= 1)
++     derivs <- d
++     stopifnot(0 <= derivs, derivs <= 4)
++     glist <- as.list(derivs)
++     ## Estimates for   g, g' , g'' ... {well, depending on derivs} :
++     for(i.d in seq_along(derivs)) {
++         nu <- derivs[i.d]
++         k0 <- korder
++         if((korder - nu) %% 2 != 0) { ## 'korder - nu' must be even {theory; Fortran code}
++             k0 <- korder - 1
++             message(gettextf("deriv = %d: modifying korder from %d to %d",
++                              nu, korder, k0))
++         }
++         glist[[i.d]] <-
++             glkerns(x.dat, y.dat, korder=k0, is.rand=is.rand, bandw = bw, deriv = nu)
++     }
++ 
++     names(glist) <- paste("nu=", derivs, sep="")
++ 
++     ## ---------  Plots ---------------
++ 
++     op <- par(mfrow= c(length(derivs), 1), mgp = c(1.25, 0.6, 0),
++               mar = c(3,3,2.5,1) + .1, oma = c(0,0, 2, 0))
++     on.exit(par(op))
++ 
++     for(i.d in seq_along(derivs)) {
++         nu <- derivs[i.d]
++         tit <-
++             switch(nu + 1,
++                    expression(widehat(g)(.)), # 0
++                    expression(widehat(g * minute)(.)), # 1: g'
++                    expression(widehat(g * second)(.)), # 2: g''
++                    expression(widehat(g * minute*second)(.)),# 3: g'''
++                    expression(widehat(g ^ {(4)})),
++                    expression(widehat(g ^ {(5)})),
++                    expression(widehat(g ^ {(6)})))
++ 
++         with(glist[[i.d]], {
++             plot(est ~ x.out, type = "l", main = tit, col=col, lwd=lwd)
++             if(nu == 0) ## data
++                 points(y ~ x, cex = 0.5)
++             else ## y = 0 line (to see zeros):
++                 abline(h = 0, col = "gray", lty=3)
++ 
++             mtext(substitute(list(bw == B,k[ord] == K),
++                              list(B = formatC(bandwidth), K = korder)),
++                   adj = 1, line = .25) })
++     }
++     mtext(sprintf("glkerns(*, deriv = %s, bandwidth = <fixed>, korder = %d)",
++                   myF(derivs, "{","}"), korder),
++           line = 0.5, outer = TRUE, cex = par("cex.main"), font = par("font.main"))
++ 
++     invisible(glist)
++ }
+
+> data(xSim)
+
+> n <- length(xSim)
+
+> tt <- ((1:n) - 1/2)/n # equidistant x
+
+> p.3glks(tt, xSim, kord = 4)
