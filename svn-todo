@@ -1,4 +1,0 @@
-svn ci -m'adding NAMESPACE ...'
-
-
-svn ci -m'-fbounds-check => internal indexing "logic error" in kerncl(); add "trace.lev" argument for diagnostics -> new src/monitor.c'
