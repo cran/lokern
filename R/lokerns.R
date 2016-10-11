@@ -5,21 +5,21 @@
 		     hetero,is.rand,inputb,
 		     m1,xl,xu,s,sig,bandwidth, trace.lev)
 {
-    r <- .Fortran(lokern_s,			 # Fortran arg.names :
-		  x = as.double(x),		 # t
-		  y = as.double(y),		 # x
-		  x.out = as.double(x.out),	 # tt
-		  est	= double(n.out),	 # y
-		  nobs = as.integer(nobs),	 # n
-		  n.out= as.integer(n.out),	 # m
-		  deriv = as.integer(deriv),	 # nue
-		  korder = as.integer(korder),	 # kord
-		  hetero = as.logical(hetero),	 # hetero
-		  is.rand= as.logical(is.rand),	 # isrand
-		  inputb = as.logical(inputb),	 # smo
+    r <- .Fortran(lokern_s,			# Fortran arg.names :
+		  x = as.double(x),		# t
+		  y = as.double(y),		# x
+		  x.out = as.double(x.out),	# tt
+		  est	= double(n.out),	# y
+		  nobs = as.integer(nobs),	# n
+		  n.out= as.integer(n.out),	# m
+		  deriv = as.integer(deriv),	# nue
+		  korder = as.integer(korder),	# kord
+		  hetero = as.logical(hetero),	# hetero
+		  is.rand= as.logical(is.rand),	# isrand
+		  inputb = as.logical(inputb),
 		  iter = as.integer(m1),# number of plug-in iterations on output
-		  xl = as.double(xl),
-		  xu = as.double(xu),
+		  xl = as.double(xl),		# tl
+		  xu = as.double(xu),		# tu
 		  s = as.double(s),
 		  sig = as.double(sig),
 		  work1 = double((nobs+1)*5),
@@ -31,22 +31,50 @@
     if(r$korder != korder)
 	warning(gettextf("'korder' reset from %d to %d, internally",
 			 korder, r$korder))
-    if(r$iter < 0) r$iter <- NA_integer_
+    if(!is.finite(r$iter)) warning("r$iter = ", r$iter," is not finite..")
+    else if(r$iter < 0) r$iter <- NA_integer_
     r
 }
 
-lokerns <- function(x, y=NULL, deriv = 0,
-                    n.out = 300, x.out = NULL, x.inOut = TRUE,
-		    korder = deriv + 2, hetero = FALSE, is.rand = TRUE,
-		    inputb = is.numeric(bandwidth) && bandwidth > 0,
-		    m1 = 400, xl = NULL, xu = NULL, s = NULL, sig = NULL,
-		    bandwidth = NULL, trace.lev = 0)
+lokerns <- function(x, ...)
+    UseMethod("lokerns")
+
+## modeled along t.test.formula ( ~/R/D/r-devel/R/src/library/stats/R/t.test.R ):
+lokerns.formula <- function(formula, data, subset, na.action, ...)
+{
+    if(missing(formula)
+       || (length(formula) != 3L)
+       || (length(attr(terms(formula[-2L]), "term.labels")) != 1L))
+        stop("'formula' missing or incorrect")
+    cl <- match.call()
+    mf <- match.call(expand.dots = FALSE)
+    if(is.matrix(eval(mf$data, parent.frame())))
+        mf$data <- as.data.frame(data)
+    mf[[1L]] <- quote(stats::model.frame)
+    mf$... <- NULL
+    mf <- eval(mf, parent.frame())
+    names(mf) <- NULL
+    response <- attr(attr(mf, "terms"), "response")
+
+    r <- lokerns.default(mf[[-response]], mf[[response]], ...)
+    r$call <- cl
+    r
+}
+
+
+lokerns.default <- function(x, y=NULL, deriv = 0,
+                            n.out = 300, x.out = NULL, x.inOut = TRUE,
+                            korder = deriv + 2, hetero = FALSE, is.rand = TRUE,
+                            inputb = is.numeric(bandwidth) && bandwidth > 0,
+                            m1 = 400, xl = NULL, xu = NULL, s = NULL, sig = NULL,
+                            bandwidth = NULL, trace.lev = 0, ...)
 {
     ## control and sort input (x,y) - new: allowing only y
     xy <- xy.coords(x,y)
     x <- xy$x
     n <- length(x)
     if (n < 3) stop("must have n >= 3 observations")
+    if(length(list(...))) warning("extraneous arguments ignored: ", deparse(list(...)))
     x.isInd <- !is.null(xy$xlab) && xy$xlab == "Index"
     isOrd <- x.isInd || !is.unsorted(x)
     if(isOrd)
@@ -101,11 +129,11 @@ lokerns <- function(x, y=NULL, deriv = 0,
     ##		variance estimation
     if (is.null(xl) || is.null(xu)) {
         xl <- 1
-        xu <- 0
+	xu <- 0 # so xl < xu -- and compiled code 'phase 4' computes (tl, tu)
     }
 
     ## s	mid-point grid :
-    s <- double(if(is.null(s) || length(s) != n+1)  n+1 else s)
+    if(is.null(s) || length(s) != n+1) s <- double(n+1)
 
     ## sig          input variance
     if (is.null(sig)) sig <- 0. #-> Fortran takes 0 = "compute default"
@@ -140,11 +168,10 @@ lokerns <- function(x, y=NULL, deriv = 0,
 #### FIXME:  does only work when 'x.out' was 'x' originally
 #### -----   Need better: by default  x.out should contain x as  x.out[ind.x]
 fitted.KernS <- function(object, ...) {
-    if(object$x.inOut)
-        with(object, {
-            fit <- est[ind.x]
-            if(isOrd) fit else fit[order(ord)]
-        })
+    if(object$x.inOut) {
+	fit <- object$est[object$ind.x]
+	if(object$isOrd) fit else fit[order(object$ord)]
+    }
     else stop("'KernS' fit was done with 'x.out' not including data;",
                 "\n hence cannot provide fitted values or residuals")
 }
@@ -171,6 +198,18 @@ stopifnot(identical(names(formals(.lokerns)),
 predict.KernS <- function (object, x, deriv = object[["deriv"]],
 			   korder = deriv+2, trace.lev = 0, ...)
 {
+    if(missing(x) && length(dots <- list(...)) == 1 && names(dots) == "newdata") {
+	x <- dots$newdata
+	if(is.data.frame(x)) {
+	    message("using first column of data.frame as 'x'")
+	    x <- x[,1L]
+	}
+	if(!is.numeric(x))
+	    stop("Need numeric 'x' for predict(<(lo|gl)kerns>, *)")
+	## else use 'x' !
+    }
+    else if(getRversion() >= "3.3")
+	chkDots(...) # useRs using other arguments -- no longer silently!
     if(deriv == object$deriv) {
 	if (missing(x) && object$x.inOut) {
 	    return(list(x = object[["x"]], y = {

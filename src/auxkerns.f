@@ -58,14 +58,16 @@ c       computes one-leave-out residuals for nonparametric estimation
 c       of residual variance (local linear approximation followed by
 c       reweighting)
 c
-c     parameters:
+c   Parameters:
 c
-c     input   t(n)      abscissae (ordered: t(i) <= t(i+1))
-c     input   x(n)      data
-c     input   n         length of data ( >2 )
-c     output  res(n)    residuals at t(1),...,t(n)
-c     output  snr       explained variance of the true curve
-c     output  sigma2    estimation of sigma^2 (residual variance)
+c   Input
+c       t(n)      abscissae (ordered: t(i) <= t(i+1))
+c       x(n)      data
+c       n         length of data ( >2 )
+c   Output
+c       res(n)    residuals at t(1),...,t(n)
+c       snr       explained variance "R^2" of the true curve
+c       sigma2    estimation of sigma^2 (residual variance)
 c
 c-----------------------------------------------------------------------
 c Arguments
@@ -78,7 +80,7 @@ c
       sigma2=0.
       ex =x(1)*(t(2)-t(1))
       ex2=x(1)*ex
-      do 1 i=2,n-1
+      do i=2,n-1
          tt=t(i+1)-t(i-1)
          if(tt.ne.0.) then
             g1=(t(i+1)-t(i))/tt
@@ -91,7 +93,7 @@ c
          sx = x(i)*tt
          ex =ex + sx
          ex2=ex2+x(i)*sx
- 1    continue
+      end do
 c     first points (ex & ex2 done at beginning)
       tt=t(3)-t(2)
       if(tt.ne.0.) then
@@ -112,7 +114,7 @@ c     last points
       res(n)=(x(n)-g1*x(n-2)-g2*x(n-1))/sqrt(1.+g1*g1+g2*g2)
 
       sigma2=(sigma2+ res(1)*res(1)+ res(n)*res(n))/n
-c- snr := explained variance
+c  snr := explained variance ( = R^2 )
       sx=x(n)*(t(n)-t(n-1))
       dn=2.*(t(n)-t(1))
       ex =(ex + sx    )/dn
@@ -161,7 +163,7 @@ c------  computing change point
 c------
       chR = chan * (t(n)-t(1)) / (n-1)
 
-      if(trace .gt. 0) call monitk0(n,m, b, chan, chR, (b .lt. chR))
+      if(trace .gt. 0) call monitk0(0, n, m, b, chan, chR, (b .lt. chR))
 
       if(b .lt. chR) then ! small bandwidth ==> classical kernel
          call kerncl(t,x,n,b,nue,kord,ny,s,tt,m,y, trace)
@@ -209,7 +211,7 @@ c------  computing change point
 c------
       chR = chan * (t(n)-t(1)) / (n-1)
 
-      if(trace .gt. 0) call monitk0(n,m, b, chan, chR, (b .lt. chR))
+      if(trace .gt. 0) call monitk0(1, n, m, b, chan, chR, (b .lt. chR))
 
       if(b .lt. chR) then
          call kerncp(t,x,n,b,nue,kord,ny,s,tt,m,y, trace)
@@ -256,7 +258,12 @@ c Var
       double precision a(7,7),a1(7),a2(7),a3(7,7),cm(7,6)
       double precision s0,sn,bmin,bmax,bb,wwl,wwr,wid,wr,wido
 c-
-      if(trace .gt. 0) call intpr('  kernfa()',-1, 0,0)
+c- Shut up over zealous compiler warnings from -Wmaybe-uninitialized :
+      wr = 0.
+      jl = -1
+      jr = -1
+
+      if(trace .gt. 0) call monitfp(0, n, b, nue, kord, ny, m, trace)
 
 c------ compute constants for later use
       s0=1.5*t(1)-0.5*t(2)
@@ -265,9 +272,10 @@ c------ compute constants for later use
       bmax=(s(n)-s(0))*.5
       if(kord.eq.2) bmin=bmin*0.1d0
       iord=kord+1
-      do 2 k=3,iord
+      do k=3,iord
         a1(k)=dble(2*k-1)/dble(k)
-2       a2(k)=dble(1-k)/dble(k)
+        a2(k)=dble(1-k)/dble(k)
+      end do
 c-
       init=0
       icall=0
@@ -308,17 +316,18 @@ c------ no boundary
 c-
 c------ initialisation for init=0
         if(init.eq.0) then
-          do 44 k=1,iord
-44          sw(k)=0.
+          do k=1,iord
+            sw(k)=0.
+          end do
           jl=1
-          do 48 j=1,n
+          do j=1,n
             if(s(j-1).lt.wwl) then
                jl=j+1
             else
-               if(s(j).gt.wwr) goto 488
+               if(s(j).gt.wwr) goto 488 ! break
                call dreg(sw,a1,a2,iord,x(j),s(j-1),s(j),tt(i),wid,1)
             end if
-48        continue
+          end do
 488       jr=j-1
           wr=wwr
           init=1
@@ -332,55 +341,56 @@ c------ compare old sum with new smoothing intervall tt(i)-b,tt(i)+b
           jnr=jr
           jnl=jl
           if(s(jr).gt.wwr) then
-            do 201 j=jr,jl,-1
+            do j=jr,jl,-1
                call dreg(sw,a1,a2,iord,x(j),s(j-1),s(j),tt(i-1),wido,-1)
                jnr=j-1
                if(s(jnr).le.wwr) goto 2011
- 201        continue
+            end do
           end if
  2011     continue
           if(s(jl-1).lt.wwl) then
-            do 301 j=jl,jr
+            do j=jl,jr
                call dreg(sw,a1,a2,iord,x(j),s(j-1),s(j),tt(i-1),wido,-1)
                jnl=j+1
                if(s(j).ge.wwl) goto 3011
- 301        continue
+            end do
           end if
  3011     continue
 c-
 c------ updating of sw
           call lreg(sw,a3,iord,(tt(i)-tt(i-1))/wid,dold,wido/wid,cm)
           if(jnr.eq.jr) then
-            do 401 j=jr+1,n
+            do j=jr+1,n
               if(s(j).gt.wwr) goto 4011
               call dreg(sw,a1,a2,iord,x(j),s(j-1),s(j),tt(i),wid,1)
               jnr=j
-401         continue
+            end do
           end if
 4011      continue
           jr=jnr
           if(jl.eq.jnl) then
-            do 402  j=jl-1,1,-1
+            do j=jl-1,1,-1
               if(s(j-1).lt.wwl) goto 4022
               call dreg(sw,a1,a2,iord,x(j),s(j-1),s(j),tt(i),wid,1)
               jnl=j
-402         continue
+            end do
            end if
  4022      continue
           jl=jnl
         else
 c-
 c------ new initialisation of sw
-          do 22 k=1,iord
-22          sw(k)=0.
-          do 202 j=jr,n
+          do k=1,iord
+            sw(k)=0.
+          end do
+          do j=jr,n
             if(s(j-1).lt.wwl) then
               jl=j+1
             else
-              if(s(j).gt.wwr) goto 2022
+              if(s(j).gt.wwr) goto 2022 ! break
               call dreg(sw,a1,a2,iord,x(j),s(j-1),s(j),tt(i),wid,1)
             end if
- 202      continue
+          end do
  2022     continue
           jr=j-1
           wr=wwr
@@ -388,14 +398,15 @@ c------ new initialisation of sw
 6666    continue
 c-
 c------ if bandwidth is too small no smoothing
-        if(wwl.ge.s(jr-1).and.wwr.le.s(jr)) then
+        if(s(jr-1).le.wwl .and. wwr.le.s(jr)) then
           y(i)=x(jr)
           if(nue.gt.0) y(i)=0.d0
         else
 c-
 c------ add first and last point of the smoothing interval
-          do 501 k=1,iord
-501         xf(k)=sw(k)
+          do k=1,iord
+            xf(k)=sw(k)
+          end do
           if(jl.ne.1)
      .       call dreg(xf,a1,a2,iord,x(jl-1),wwl,s(jl-1),tt(i),wid,1)
           if(jr.ne.n)
@@ -407,10 +418,10 @@ c------ now the sums are built that are needed to compute the estimate
         end if
 c-
 c------ new initialisation ?
-        if(jl.gt.jr.or.wwl.gt.wr.or.init.gt.100) init=0
+        if(jl.gt.jr .or. wwl.gt.wr .or. init.gt.100) init=0
         wido=wid
 c-
-100     continue
+ 100  continue
 c-
       return
       end ! kernfa
@@ -451,6 +462,12 @@ c Var
       double precision a(7,7),a1(7),a2(7),a3(7,7),cm(7,6)
       double precision s0,sn,bmin,bmax,bb,wwl,wwr,wid,wr,wido
 c-
+      if(trace .gt. 0) call monitfp(1, n, b, nue, kord, ny, m, trace)
+c- Shut up over zealous compiler warnings from -Wmaybe-uninitialized
+      jl = -1
+      jr = -1
+      wr = 0.
+
 c------ compute constants for later use
       s0=1.5*t(1)-0.5*t(2)
       sn=1.5*t(n)-0.5*t(n-1)
@@ -459,16 +476,17 @@ c------ compute constants for later use
       if(kord.eq.2) bmin=bmin*0.1d0
       iord=kord+1
       call coffi(nue,kord,c)
-      do 2 k=3,iord
+      do k=3,iord
         a1(k)=dble(2*k-1)/dble(k)
-2       a2(k)=dble(1-k)/dble(k)
+        a2(k)=dble(1-k)/dble(k)
+      end do
 c-
       init=0
       icall=0
       dold=0.d0
 c-
 c------ smoothing loop
-      do 100 i=1,m
+      do i=1,m
         bb=b
         if (ny .eq. 1) bb=y(i)
         if(bb.lt.bmin) bb=bmin
@@ -501,29 +519,32 @@ c------ no boundary
 c-
 c------ compute normalizing constant
         if(iboun.ne.0) then
+          q=0. ! -Wall
           if(iboun.eq.1) q=(tt(i)-s(0))/wid
           if(iboun.eq.-1) q=(s(n)-tt(i))/wid
           qq=q*q
           xnor=c(1)*(1.d0+q)
-          do 3 k=3,iord,2
+          do k=3,iord,2
              q=q*qq
-3            xnor=xnor+c(k)*(1.d0+q)
+             xnor=xnor+c(k)*(1.d0+q)
+          end do
           iboun=0
         end if
 c-
 c------ initialisation for init=0
         if(init.eq.0) then
-          do 44 k=1,iord
-44          sw(k)=0.
+          do k=1,iord
+            sw(k)=0.
+          end do
           jl=1
-          do 48 j=1,n
+          do j=1,n
             if(s(j-1).lt.wwl) then
               jl=j+1
             else
               if(s(j).gt.wwr) goto 488
               call dreg(sw,a1,a2,iord,x(j),s(j-1),s(j),tt(i),wid,1)
             end if
-48          continue
+          end do
 488       jr=j-1
           wr=wwr
           init=1
@@ -537,69 +558,71 @@ c------ compare old sum with new smoothing intervall tt(i)-b,tt(i)+b
           jnr=jr
           jnl=jl
           if(s(jr).gt.wwr) then
-            do 201 j=jr,jl,-1
+            do j=jr,jl,-1
               call dreg(sw,a1,a2,iord,x(j),s(j-1),s(j),tt(i-1),wido,-1)
               jnr=j-1
               if(s(jnr).le.wwr) goto 2011
-201           continue
+            end do
           end if
 2011      continue
           if(s(jl-1).lt.wwl) then
-            do 301 j=jl,jr
+            do j=jl,jr
               call dreg(sw,a1,a2,iord,x(j),s(j-1),s(j),tt(i-1),wido,-1)
               jnl=j+1
               if(s(j).ge.wwl) goto 3011
-301           continue
+            end do
           end if
 3011      continue
 c-
 c------ updating of sw
           call lreg(sw,a3,iord,(tt(i)-tt(i-1))/wid,dold,wido/wid,cm)
           if(jnr.eq.jr) then
-            do 401 j=jr+1,n
+            do j=jr+1,n
               if(s(j).gt.wwr) goto 4011
               call dreg(sw,a1,a2,iord,x(j),s(j-1),s(j),tt(i),wid,1)
               jnr=j
-401           continue
+            end do
           end if
 4011      continue
           jr=jnr
           if(jl.eq.jnl) then
-            do 402  j=jl-1,1,-1
+            do j=jl-1,1,-1
               if(s(j-1).lt.wwl) goto 4022
               call dreg(sw,a1,a2,iord,x(j),s(j-1),s(j),tt(i),wid,1)
               jnl=j
-402           continue
+            end do
           end if
 4022      continue
           jl=jnl
         else
 c-
 c------ new initialisation of sw
-          do 22 k=1,iord
-22          sw(k)=0.
-          do 202 j=jr,n
+          do k=1,iord
+            sw(k)=0.
+          end do
+          do j=jr,n
             if(s(j-1).lt.wwl) then
               jl=j+1
             else
               if(s(j).gt.wwr) goto 2022
               call dreg(sw,a1,a2,iord,x(j),s(j-1),s(j),tt(i),wid,1)
             end if
-202         continue
+          end do
 2022      jr=j-1
           wr=wwr
         end if
 6666    continue
 c-
 c------ if bandwidth is too small no smoothing
-        if(wwl.ge.s(jr-1).and.wwr.le.s(jr)) then
+        if(s(jr-1).le.wwl .and. wwr.le.s(jr)) then
           y(i)=x(jr)
           if(nue.gt.0) y(i)=0.d0
         else
 c-
 c------ add first and last point of the smoothing interval
-          do 501 k=1,iord
-501         xf(k)=sw(k)
+          do k=1,iord
+            xf(k)=sw(k)
+          end do
           if(jl.ne.1)
      .       call dreg(xf,a1,a2,iord,x(jl-1),wwl,s(jl-1),tt(i),wid,1)
           if(jr.ne.n)
@@ -612,11 +635,11 @@ c------ now the sums are built that are needed to compute the estimate
         end if
 c-
 c------ new initialisation ?
-        if(jl.gt.jr.or.wwl.gt.wr.or.init.gt.100) init=0
+        if(jl.gt.jr .or. wwl.gt.wr .or. init.gt.100) init=0
         wido=wid
 c-
-100     continue
-c-
+      end do
+c-    ------ end{smoothing loop}
       return
       end ! kernfp
 
@@ -659,17 +682,20 @@ c------  compute legendre polynomials
       p(1,2)=(t-sr)/b
       p(2,1)=1.5d0*p(1,1)*p(1,1)-.5d0
       p(2,2)=1.5d0*p(1,2)*p(1,2)-.5d0
-      do 1 k=3,iord
+      do k=3,iord
          p(k,1)=a1(k)*p(k-1,1)*p(1,1)+ a2(k)*p(k-2,1)
- 1       p(k,2)=a1(k)*p(k-1,2)*p(1,2)+ a2(k)*p(k-2,2)
-c     -
+         p(k,2)=a1(k)*p(k-1,2)*p(1,2)+ a2(k)*p(k-2,2)
+      end do
+
 c------compute new legendre sums
       if(iflop.eq.1) then
-        do 2 k=1,iord
-2         sw(k)=sw(k)+(p(k,1)-p(k,2))*x
+        do k=1,iord
+          sw(k)=sw(k)+(p(k,1)-p(k,2))*x
+        end do
       else
-        do 3 k=1,iord
-3         sw(k)=sw(k)+(p(k,2)-p(k,1))*x
+        do k=1,iord
+          sw(k)=sw(k)+(p(k,2)-p(k,1))*x
+        end do
       end if
       return
       end
@@ -750,13 +776,16 @@ c-
 c-
 c------- built up matrix a3=p*q*p**-1
         a3(1,1)=q
-        do 1 k=2,iord
-1         a3(k,k)=a3(k-1,k-1)*q
+        do k=2,iord
+          a3(k,k)=a3(k-1,k-1)*q
+        end do
         ww=q*q-1.d0
-        do 2 k=1,iord-2
+        do k=1,iord-2
           ww=ww*q
-2         a3(k+2,k)=(k+.5d0)*ww
+          a3(k+2,k)=(k+.5d0)*ww
+        end do
 c-
+        qq=0. ! -Wall (stupid compiler)
         if(iord.ge.5) then
           qq=a3(2,2)
           a3(5,1)=q*(1.875d0+qq*(-5.25d0+qq*3.375d0))
@@ -844,14 +873,15 @@ c------- definition of legendre coefficients for boundary
 c-
 c------- computation of the smoothed value at boundary
         y=c(1)*sw(1)+c(2)*a(2,2)*sw(2)
-        do 1 j=3,kord+1
+        do j=3,kord+1
           ww=a(j,j)*sw(j)
-          do 2 i=j-2,1,-2
-2           ww=ww+a(i,j)*sw(i)
+          do i=j-2,1,-2
+            ww=ww+a(i,j)*sw(i)
+          end do
           y=y+c(j)*ww
-1         continue
-      else
+        end do
 c-
+      else
 c------- computation of the smoothed value at interior
         if(nue.eq.0) then
           if(kord.eq.2) y=-.1*sw(3)+.6*sw(1)
@@ -1003,7 +1033,7 @@ c-----------------------------------------------------------------------
       integer n,nue,iord,iboun,ist, trace
       double precision s(0:n), x(n), tau,wid, s1,c(7),y
 c Var
-      double precision wo(7), yy,yyy,w,widnue
+      double precision wo(7), yy,yyy,w
       integer jend,ibeg,incr,i,j
       logical nu_odd
 c-
@@ -1027,11 +1057,13 @@ c------  compute initial kernel values
       if(iboun.gt.0) then
         yy=(tau-s1)/wid
         wo(ibeg)=yy
-        do 1 i=ibeg,iord-incr,incr
-1         wo(i+incr)=wo(i)*yy
+        do i=ibeg,iord-incr,incr
+          wo(i+incr)=wo(i)*yy
+        end do
       else
-        do 2 i=ibeg,iord,incr
-2         wo(i)=1.
+        do i=ibeg,iord,incr
+          wo(i)=1.
+        end do
       end if
 c-
 c------  loop over smoothing interval
@@ -1180,7 +1212,7 @@ c-----------------------------------------------------------------------
       integer n,nue,iord,iboun,ist, trace
       double precision s(0:n), x(n), tau,wid, s1,c(7),y
 c Var
-      double precision wo(7), yy,yyy,w,widnue,ww
+      double precision wo(7), yy,yyy,w,ww
       integer jend,ibeg,incr,i,j
       logical nu_odd
 c-
@@ -1202,11 +1234,13 @@ c------  compute initial kernel values
         wo(ibeg)=yy
         yy=yy*yy
         if(nu_odd) wo(ibeg)=yy
-        do 1 i=ibeg,iord-incr,incr
-1         wo(i+incr)=wo(i)*yy
+        do i=ibeg,iord-incr,incr
+          wo(i+incr)=wo(i)*yy
+        end do
       else
-        do 2 i=ibeg,iord,incr
-2         wo(i)=1.
+        do i=ibeg,iord,incr
+          wo(i)=1.
+        end do
       end if
 c-
 c------  loop over smoothing interval
@@ -1260,8 +1294,9 @@ c-----------------------------------------------------------------------
 c
       integer i
 c-
-      do 10 i=1,7
-10      c(i)=0.
+      do i=1,7
+        c(i)=0.
+      end do
       if(nue.eq.0.and.kord.eq.2) then
           c(1)=0.75d0
           c(3)=-0.25d0
@@ -1347,8 +1382,9 @@ c Var
       integer i,j
       double precision p,p1,p3,p12,p6,d
 c
-      do 10 i=1,7
-10       c(i)=0.
+      do i=1,7
+         c(i)=0.
+      end do
       p=-q
       p1=1.+q
       p3=p1*p1*p1
@@ -1465,8 +1501,9 @@ c
       if(iboun.gt.0) return
       j=2
       if(nue.eq.1.or.nue.eq.3) j=1
-      do 2 i=j,kord,2
-2       c(i)=-c(i)
+      do i=j,kord,2
+        c(i)=-c(i)
+      end do
       return
       end ! coffb
 
@@ -1475,7 +1512,8 @@ c
       double precision  x(n),fa
 
       integer i
-      do 1 i=1,n
-1       x(i)=fa
+      do i=1,n
+        x(i)=fa
+      end do
       return
       end

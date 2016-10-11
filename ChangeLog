@@ -1,3 +1,16 @@
+2016-09-19  Martin Maechler  <maechler@stat.math.ethz.ch>
+
+	* R/lokerns.R (predict.KernS): now 'newdata = *' works; and other
+ 	{extraneous} args give a warning.
+
+2014-11-19  Martin Maechler  <maechler@stat.math.ethz.ch>
+
+	* Thanks to Andri Signorell's insistence:
+	* R/lokerns.R (lokerns.default, *.formula): make S3 generic;
+	provide formula method
+	* R/glkerns.R (glkerns.default, *.formula): ditto
+
+
 2014-11-18  Martin Maechler  <maechler@stat.math.ethz.ch>
 
 	* DESCRIPTION (Version): 1.1-6
