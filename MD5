@@ -1,5 +1,5 @@
 90f00a9e74e7d36a7303c829f417934f *ChangeLog
-08736573ba9af07ca8bf08244850c148 *DESCRIPTION
+fd96dc5e71558186c99c168887619ca4 *DESCRIPTION
 261ea31101d70d0ff7f254254a47b334 *NAMESPACE
 b065d856fbec41bd5bed1cb7a23f7dae *R/glkerns.R
 fb64c6583636363557499ee8ba660f18 *R/lokerns.R
@@ -13,13 +13,14 @@ ffb4f64e60ebd9b2b6f27b3fe0f8dbe7 *demo/glk-derivs.R
 1c3fe7d0421d83d7767167d1b3561e41 *man/lokerns.Rd
 afa8930b5a0abc0e4bae06cfa5f5b39a *man/varNPreg.Rd
 7ee12f82ad6b1951efe1a08c031c54b0 *man/xSim.Rd
-eb074f4a87775212dda2415dc5b235e1 *src/auxkerns.f
-d6560c20d1a08ad9cdb9b8ec7f2d34f6 *src/glkerns.f
-f0f45690a6ce31f3e9186b715d279338 *src/lokerns.f
+67d59674df7f02e3f7d679a6ae0eb4ec *src/auxkerns.f
+5c394c239f9e7b29113663358f1ef268 *src/glkerns.f
+041b02c30304712f168be4c5435f7eca *src/init.c
+54de6b79dd5ec9c7a8bbd7691eb34e90 *src/lokerns.f
 610fc374cbfc9e74821a03fe4bf611ea *src/monitor.c
 1ed8d71978ccd7cbf19357a57dc9da3a *tests/glk-lok-new.R
 25752dba768f19e4929aa24f6c2a2191 *tests/glk1.R
-ece0c4b2d44d4cecffc8711a1694dc7a *tests/glk1.Rout.save
+9bea79bb03c4d1567bc266888ef16ba4 *tests/glk1.Rout.save
 2febf9aa89e7501bcc793a1bb792a416 *tests/infloop-bug.R
 aa598f2c2605c1ace1ee3b75354910c1 *tests/lok1.R
-938cd28aa85823dc4499fb4bed1da186 *tests/lok1.Rout.save
+42328748f429aea6a3514b2fbffe1e99 *tests/lok1.Rout.save

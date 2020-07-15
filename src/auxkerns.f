@@ -153,7 +153,7 @@ c  input    trace        integer: > 0 means "print tracing info"
 c  output   y(m)         estimated regression function
 c
 c-----------------------------------------------------------------------
-      integer n,nue, kord,ny,m, trace
+      integer n,nue, kord,ny,m, trace, classic
       double precision t(n),x(n), b,s(0:n),tt(m),y(m)
 c
       double precision chan, chR
@@ -163,7 +163,12 @@ c------  computing change point
 c------
       chR = chan * (t(n)-t(1)) / (n-1)
 
-      if(trace .gt. 0) call monitk0(0, n, m, b, chan, chR, (b .lt. chR))
+      if (b .lt. chR) then
+        classic = 1
+      else
+        classic = 0
+      endif
+      if(trace .gt. 0) call monitk0(0, n, m, b, chan, chR, classic)
 
       if(b .lt. chR) then ! small bandwidth ==> classical kernel
          call kerncl(t,x,n,b,nue,kord,ny,s,tt,m,y, trace)
@@ -201,7 +206,7 @@ c  input    trace        integer: > 0 means "print tracing info"
 c  output   y(m)         estimated regression function
 c
 c-----------------------------------------------------------------------
-      integer n,nue, kord,ny,m, trace
+      integer n,nue, kord,ny,m, trace, classic
       double precision t(n),x(n), b,s(0:n),tt(m),y(m)
 c
       double precision chan, chR
@@ -211,7 +216,12 @@ c------  computing change point
 c------
       chR = chan * (t(n)-t(1)) / (n-1)
 
-      if(trace .gt. 0) call monitk0(1, n, m, b, chan, chR, (b .lt. chR))
+      if(b .lt. chR) then
+        classic = 1
+      else
+        classic = 0
+      end if
+      if(trace .gt. 0) call monitk0(1, n, m, b, chan, chR, classic)
 
       if(b .lt. chR) then
          call kerncp(t,x,n,b,nue,kord,ny,s,tt,m,y, trace)

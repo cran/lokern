@@ -20,7 +20,8 @@ c Args
      +     tl, tu,
      +     s(0:n), ! mid point values for convolution kernel
      +     sig
-      logical hetero, isrand, inputb
+       integer hetero, isrand, inputb
+c      logical hetero, isrand, inputb
 c			      inputb (was "smo", now same as in R):
 c if TRUE, do not compute bandwidths but use ban(.)
       integer m1, trace
@@ -47,7 +48,7 @@ c Stop for invalid inputs (impossible when called from R's lokerns())
 
 c     0 <= nue <= 4;  nue <= 2 if(! inputb)
       if(nue.gt.4 .or. nue.lt.0) call rexit("nue must be in 0..4")
-      if(nue.gt.2 .and. .not. inputb)
+      if(nue.gt.2 .and. inputb .ne. 0)
      +     call rexit("nue must be in 0..2 if not 'inputb'")
       if(n .le. 2) call rexit("n <= 2")
       if(m .lt. 1) call rexit("m < 1")
@@ -56,7 +57,7 @@ c     0 <= nue <= 4;  nue <= 2 if(! inputb)
 c     kord - nue must be even :
       kk=(kord-nue)/2
       if(2*kk + nue .ne. kord)        kord=nue+2
-      if(kord.gt.4 .and. .not.inputb) kord=nue+2
+      if(kord.gt.4 .and. inputb .eq. 0) kord=nue+2
       if(kord.gt.6 .or. kord.le.nue)  kord=nue+2
 
       rvar=sig
@@ -78,9 +79,9 @@ c-------- 2. computation of s-sequence
          end do
          s(0)=s0
          s(n)=sn
-         if(inputb .and. .not.isrand) goto 230
+         if(inputb .ne. 0 .and. isrand .eq. 0) goto 230
       else
-         if(inputb) goto 230
+         if(inputb .ne. 0) goto 230
       end if
 c-
 c-------- 3. computation of minimal, maximal allowed global bandwidth
@@ -161,7 +162,7 @@ c-
 c-------- 9. estimating variance and smoothed pseudoresiduals
       if(trace .gt. 0) call monit1(9, trace)
       rvar=sig ! to become old 'sig'
-      if(hetero) then
+      if(hetero .ne. 0) then
         call resest(t,x,n,wn(1,2),snr,sig)
         bres=max(bmin,.2*dble(nn)**(-.2)*(s(iu)-s(il-1)))
         do i=1,n
@@ -188,7 +189,7 @@ c-------- 10. [LOOP:] estimate/compute integral constant
 c-
 c-------- 11. refinement of s-sequence for random design
       if(trace .ge. 2) call monit1(11, trace)
-      if(inputs .and. isrand) then
+      if(inputs .and. isrand .ne. 0) then
         do i=0,n
           wn(i,5)=dble(i)/dble(n+1)
           wn(i,2)=(dble(i)+.5)/dble(n+1)
@@ -211,7 +212,7 @@ c-------- 11. refinement of s-sequence for random design
            end if
         end do
         if(needsrt) goto 111
-        if(inputb) goto 230
+        if(inputb .ne. 0) goto 230
       end if
       b=bmin*2.
 c-
@@ -252,7 +253,7 @@ c-------- 16  compute smoothed function with global plug-in bandwidth
 c-
 c-------- 17. variance check
       if(trace .ge. 2) call monit1(17, trace)
-      if(hetero) sig=rvar
+      if(hetero .ne. 0) sig=rvar
       if(sig.eq.rvar .or. r2.lt.0.88 .or. nue.gt.0) goto 180
       ii=0
       iil=0
