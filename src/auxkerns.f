@@ -48,7 +48,9 @@ cc     subroutine constV(x,n,fa)
 cc                simple subroutine for array initialization
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 
-      subroutine resest(t,x,n, res,snr,sigma2)
+c==  called from other Fortran *and* from R varNPreg() in ../R/varNPreg.R
+
+      subroutine resest(t,x, n, res, snr,sigma2)
 c-----------------------------------------------------------------------
 c       version: june, 1996
 c
@@ -70,13 +72,15 @@ c       snr       explained variance "R^2" of the true curve
 c       sigma2    estimation of sigma^2 (residual variance)
 c
 c-----------------------------------------------------------------------
+      implicit none
+c
 c Arguments
       integer n
       double precision x(n),t(n), res(n), snr, sigma2
 c Var
       integer i
       double precision ex,ex2,tt,g1,g2,sx,dn
-c
+
       sigma2=0.
       ex =x(1)*(t(2)-t(1))
       ex2=x(1)*ex
@@ -88,7 +92,7 @@ c
             g1=.5
          endif
          g2=1.-g1
-         res(i)=(x(i)-g1*x(i-1)-g2*x(i+1))/sqrt(1.+g1*g1+g2*g2)
+         res(i)= (x(i)-g1*x(i-1)-g2*x(i+1)) / sqrt(1.+g1*g1+g2*g2)
          sigma2=sigma2+res(i)*res(i)
          sx = x(i)*tt
          ex =ex + sx
@@ -102,7 +106,7 @@ c     first points (ex & ex2 done at beginning)
          g1=.5
       endif
       g2=1.-g1
-      res(1)=(x(1)-g1*x(3)-g2*x(2))/sqrt(1.+g1*g1+g2*g2)
+      res(1)= (x(1)-g1*x(3)-g2*x(2)) / sqrt(1.+g1*g1+g2*g2)
 c     last points
       tt=t(n-1)-t(n-2)
       if(tt.ne.0.) then
@@ -111,7 +115,7 @@ c     last points
          g1=.5
       endif
       g2=1.-g1
-      res(n)=(x(n)-g1*x(n-2)-g2*x(n-1))/sqrt(1.+g1*g1+g2*g2)
+      res(n)= (x(n)-g1*x(n-2)-g2*x(n-1)) / sqrt(1.+g1*g1+g2*g2)
 
       sigma2=(sigma2+ res(1)*res(1)+ res(n)*res(n))/n
 c  snr := explained variance ( = R^2 )
@@ -127,7 +131,7 @@ c  snr := explained variance ( = R^2 )
       return
       end ! resest
 
-      subroutine kernel(t,x,n,b,nue,kord,ny,s,tt,m, y, trace)
+      subroutine kernel(t,x,n, b, nue,kord,ny, s,tt,m, y, trace)
 c-----------------------------------------------------------------------
 c       short-version may, 1995
 c
@@ -153,27 +157,35 @@ c  input    trace        integer: > 0 means "print tracing info"
 c  output   y(m)         estimated regression function
 c
 c-----------------------------------------------------------------------
-      integer n,nue, kord,ny,m, trace, classic
-      double precision t(n),x(n), b,s(0:n),tt(m),y(m)
-c
+      implicit none
+c Args
+      integer n, m
+      double precision t(n), x(n), b
+      integer nue, kord, ny
+      double precision s(0:n), tt(m),y(m)
+      integer trace
+c Vars
       double precision chan, chR
+      integer classic
 c
 c------  computing change point
-      chan=(5.+kord)*max(1.,sqrt(float(n)/float(m)))
+      chan=(5.+kord) * max(1., sqrt(float(n)/float(m)))
 c------
       chR = chan * (t(n)-t(1)) / (n-1)
 
-      if (b .lt. chR) then
-        classic = 1
-      else
-        classic = 0
+      if(trace .gt. 0) then
+         if(b .lt. chR) then
+            classic = 1
+         else
+            classic = 0
+         end if
+         call monitk0(0, n, m, b, ny, chan, chR, classic)
       endif
-      if(trace .gt. 0) call monitk0(0, n, m, b, chan, chR, classic)
 
       if(b .lt. chR) then ! small bandwidth ==> classical kernel
-         call kerncl(t,x,n,b,nue,kord,ny,s,tt,m,y, trace)
+         call kerncl(t,x,n,b, nue,kord,ny, s,tt,m,y, trace)
       else ! fast kernel
-         call kernfa(t,x,n,b,nue,kord,ny,s,tt,m,y, trace)
+         call kernfa(t,x,n,b, nue,kord,ny, s,tt,m,y, trace)
       end if
       return
       end ! kernel
@@ -206,9 +218,10 @@ c  input    trace        integer: > 0 means "print tracing info"
 c  output   y(m)         estimated regression function
 c
 c-----------------------------------------------------------------------
-      integer n,nue, kord,ny,m, trace, classic
-      double precision t(n),x(n), b,s(0:n),tt(m),y(m)
+      integer n,nue, kord,ny, m, trace
+      double precision t(n), x(n), b, s(0:n), tt(m), y(m)
 c
+      integer classic
       double precision chan, chR
 c
 c------  computing change point
@@ -216,12 +229,14 @@ c------  computing change point
 c------
       chR = chan * (t(n)-t(1)) / (n-1)
 
-      if(b .lt. chR) then
-        classic = 1
-      else
-        classic = 0
-      end if
-      if(trace .gt. 0) call monitk0(1, n, m, b, chan, chR, classic)
+      if(trace .gt. 0) then
+         if(b .lt. chR) then
+            classic = 1
+         else
+            classic = 0
+         end if
+         call monitk0(1, n, m, b, ny, chan, chR, classic)
+      endif
 
       if(b .lt. chR) then
          call kerncp(t,x,n,b,nue,kord,ny,s,tt,m,y, trace)
@@ -260,6 +275,8 @@ c  output   y(m)         estimated function
 c
 c
 c-----------------------------------------------------------------------
+      implicit none
+
       integer n,nue,kord,ny,m, trace
       double precision t(n),x(n),s(0:n),tt(m),y(m),b
 c Var
@@ -464,6 +481,8 @@ c  output   y(m)         estimated function
 c
 c
 c-----------------------------------------------------------------------
+      implicit none
+
       integer n,nue,kord,ny,m, trace
       double precision t(n),x(n),s(0:n),tt(m),y(m),b
 c Var
@@ -653,7 +672,7 @@ c-    ------ end{smoothing loop}
       return
       end ! kernfp
 
-      subroutine dreg(sw,a1,a2,iord,x,sl,sr,t,b,iflop)
+      subroutine dreg(sw,a1,a2, iord, x,sl,sr, t,b, iflop)
 c-----------------------------------------------------------------------
 c       version: may, 1995
 c
@@ -680,13 +699,16 @@ c                    **************   output   *******************
 c
 c        sw(iord)  :   new sum of data weights for legendre polynom.
 c
+      implicit none
 c-----------------------------------------------------------------------
-      integer iord,iflop
-      double precision sw(7),a1(7),a2(7),x,sl,sr,t,b
 
+      double precision sw(7), a1(7), a2(7)
+      integer iord, iflop
+      double precision x,sl,sr, t,b
+c Var
       integer k
       double precision p(7,2)
-c-
+
 c------  compute legendre polynomials
       p(1,1)=(t-sl)/b
       p(1,2)=(t-sr)/b
@@ -710,7 +732,7 @@ c------compute new legendre sums
       return
       end
 
-      subroutine lreg(sw,a3,iord,d,dold,q,c)
+      subroutine lreg(sw,a3, iord, d,dold, q,c)
 c------------------------------------------------------------------
 c       version: may, 1995
 c
@@ -735,13 +757,17 @@ c                          **************   output   ******************
 c
 c               sw(iord)  :  updated version of sw
 c
+      implicit none
 c---------------------------------------------------------------------
-      integer iord,k,i,l
-      double precision d,dold,q,dd,ww,qq,xx
-      double precision a3(7,7),c(7,6),sw(7)
-c-
+      double precision sw(7), a3(7,7)
+      integer iord
+      double precision d,dold, q, c(7,6)
+c Var
+      integer k,i,l
+      double precision dd,ww,qq,xx
+
 c- build up matrix
-      if(dold.ne.d.or.dold.eq.0) then
+      if(dold.ne.d .or. dold.eq.0) then
         dold=d
         dd=d*d
 c-
@@ -831,7 +857,7 @@ c------- compute a*c and new legendre sums
       return
       end
 
-      subroutine freg(sw,nue,kord,iboun,y,c,icall,a)
+      subroutine freg(sw, nue,kord,iboun, y,c, icall, a)
 c------------------------------------------------------------------
 c       short-version: may, 1995
 c
@@ -856,10 +882,17 @@ c                          **************   output   ******************
 c
 c               y          :  computed estimate
 c
+      implicit none
 c--------------------------------------------------------------------
-      integer nue,kord,iboun,icall,i,j
-      double precision sw(7),c(7),a(7,7),y,ww
-c-
+      double precision sw(7)
+      integer nue, kord, iboun
+      double precision y, c(7)
+      integer icall
+      double precision a(7,7)
+c Var
+      integer i,j
+      double precision ww
+
 c------- definition of legendre coefficients for boundary
       if(icall.eq.0.and.iboun.ne.0) then
              a(2,2)=2./3.
@@ -915,7 +948,7 @@ c-
       return
       end
 
-      subroutine kerncl(t,x,n,b,nue,kord,ny,s,tt,m,y, trace)
+      subroutine kerncl(t,x, n, b, nue,kord,ny, s,tt,m,y, trace)
 c-----------------------------------------------------------------------
 c       short-version january 1995
 c
@@ -937,9 +970,14 @@ c  input    m            number of points to estimate
 c  input    y(m)         bandwith sequence for ny=1, dummy for ny=0
 c  output   y(m)         estimated regression function
 c
+      implicit none
 c-----------------------------------------------------------------------
-      integer n,nue,kord,ny,m, trace
-      double precision t(n),x(n), b, s(0:n),tt(m),y(m)
+
+      integer n, m
+      double precision t(n), x(n), b
+      integer nue, kord, ny
+      double precision s(0:n), tt(m), y(m)
+      integer trace
 c Var
       double precision c(7),c1(7)
       integer ist,i,iboun,iord
@@ -1017,7 +1055,7 @@ c-
       return
       end ! kerncl()
 
-      subroutine smo(s,x,n,tau,wid,nue,iord,iboun,ist,s1,c,y, trace)
+      subroutine smo(s,x,n, tau,wid, nue,iord,iboun,ist, s1,c,y, trace)
 c-----------------------------------------------------------------------
 c       short-version january 1995
 c
@@ -1039,9 +1077,14 @@ c  input    c(7)         kernel coefficients
 c  OUTPUT   y            smoothed value at tau
 c  work     wo(7)        work array
 c
+      implicit none
 c-----------------------------------------------------------------------
-      integer n,nue,iord,iboun,ist, trace
-      double precision s(0:n), x(n), tau,wid, s1,c(7),y
+      integer n
+      double precision s(0:n), x(n)
+      double precision tau, wid
+      integer nue, iord, iboun, ist
+      double precision s1, c(7), y
+      integer trace
 c Var
       double precision wo(7), yy,yyy,w
       integer jend,ibeg,incr,i,j
@@ -1107,7 +1150,7 @@ c-
       return
       end ! smo
 
-      subroutine kerncp(t,x,n,b,nue,kord,ny,s,tt,m,y, trace)
+      subroutine kerncp(t,x,n, b, nue,kord,ny, s,tt,m, y, trace)
 c-----------------------------------------------------------------------
 c       short-version january 1997
 c
@@ -1130,12 +1173,16 @@ c  input    m            number of points to estimate
 c  input    y(m)         bandwith sequence for ny=1, dummy for ny=0
 c  output   y(m)         estimated regression function
 c
+      implicit none
 c-----------------------------------------------------------------------
-      integer n, nue,kord,ny, m, trace
-      double precision t(n),x(n),b, s(0:n),tt(m),y(m)
+      integer n, m
+      double precision t(n),x(n), b
+      integer nue, kord, ny
+      double precision s(0:n), tt(m), y(m)
+      integer trace
 c Var
       integer ist,i,iboun,iord
-      double precision c(7),c1(7), bb, bmax, wid, s0,s1,sn, bmin
+      double precision c(7), c1(7), bb, bmax, wid, s0,s1,sn, bmin
 
 c------  compute kernel coefficients for interior and some constants
       call coffi(nue,kord,c)
@@ -1196,7 +1243,7 @@ c-
       return
       end ! kerncp()
 
-      subroutine smop(s,x,n,tau,wid,nue,iord,iboun,ist,s1,c,y, trace)
+      subroutine smop(s,x,n, tau,wid, nue,iord,iboun,ist, s1,c,y, trace)
 c-----------------------------------------------------------------------
 c       short-version january 1995
 c
@@ -1218,9 +1265,14 @@ c  input    c(7)         kernel coefficients
 c  OUTPUT   y            smoothed value at tau
 c  work     wo(7)        work array
 c
+      implicit none
 c-----------------------------------------------------------------------
-      integer n,nue,iord,iboun,ist, trace
-      double precision s(0:n), x(n), tau,wid, s1,c(7),y
+
+      integer n
+      double precision s(0:n), x(n),  tau, wid
+      integer nue, iord, iboun, ist
+      double precision s1, c(7), y
+      integer trace
 c Var
       double precision wo(7), yy,yyy,w,ww
       integer jend,ibeg,incr,i,j
@@ -1298,16 +1350,17 @@ c  input  nue        order of derivative (0-4)
 c  input  kord       order of kernel (nue+i, i=2,4,6;  kord<=6)
 c  output c(7)       polynomial kernel coefficients
 c
+      implicit none
 c-----------------------------------------------------------------------
       integer nue,kord
       double precision c(7)
 c
       integer i
-c-
+
       do i=1,7
         c(i)=0.
       end do
-      if(nue.eq.0.and.kord.eq.2) then
+      if(nue.eq.0 .and. kord.eq.2) then
           c(1)=0.75d0
           c(3)=-0.25d0
       end if

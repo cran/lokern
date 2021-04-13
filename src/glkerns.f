@@ -1,5 +1,5 @@
-      subroutine glkern_s(t,x, tt,y, n,m,nue,kord, hetero,isrand,
-     +     inputb,m1,tl,tu,s,sig,wn,w1,b, trace)
+      subroutine glkern_s(t,x, tt,y, n,m,nue,kord, hetero,
+     .     israndI,inputbI, m1,tl,tu,s,sig, wn,w1, b, trace)
 c----------------------------------------------------------------------*
 c-----------------------------------------------------------------------
 c       Short-version: Oct 1996
@@ -13,28 +13,33 @@ c       (nue,kord) = (0,2), (0,4), (1,3) or (2,4).
 c-----------------------------------------------------------------------
 c  used subroutines: constV, resest, kernel with further subroutines
 c-----------------------------------------------------------------------
+      implicit none
+c
 c Args
       integer n, m, nue,kord
-      double precision t(n),x(n), tt(m), tl,tu, s(0:n), sig
-      integer hetero, isrand, inputb
-c      logical hetero, isrand, inputb
-c			      inputb (was "smo", now same as in R):
-c	 if TRUE, do not compute bandwidth, but *use* 'b' given as input
-      integer m1, trace
-      double precision wn(0:n,5),w1(m1,3), b, y(m)
+      double precision t(n),x(n), tt(m),y(m)
+      integer hetero, israndI, inputbI, m1
+      double precision tl,tu, s(0:n), sig, wn(0:n,5), w1(m1,3), b
+      integer trace
+
 c Var
       logical inputs, needsrt
-      integer nyg, i,ii,iil,itt,il,iu,itende,it, j, kk,kk2, nn
+      integer i,ii,iil,itt,il,iu,itende,it, j, kk,kk2, nn
       double precision bias(2,0:2), vark(2,0:2), fak2(2:4),
      1     rvar, s0,sn, b2,bmin,bmax, bres,bs, alpha,ex,exs,exsvi,
      2     r2,snr,osig, vi,ssi,const,fac, q,tll,tuu, xi,xmy2
-c-
-c-------- 1. initialisations
+      logical isrand, inputb
+c		      inputb (was "smo", now same as in R):
+c if TRUE, do not compute bandwidths but use ban(.)
+
+c-------- 1. initialisations ('data' *first*) ----------
+
       data bias/.2, .04762, .4286, .1515, 1.33, .6293/
       data vark/.6,  1.250, 2.143, 11.93, 35.0, 381.6/
       data fak2/4.,36.,576./
-      nyg=0
       inputs = .false.
+      isrand = (israndI .ne. 0)
+      inputb = (inputbI .ne. 0)
 c r2:  used in phase 17, but only defined in phase 9 if(hetero & sig <= 0)
       r2=0.
 
@@ -42,7 +47,7 @@ c Stop for invalid inputs (impossible when called from R's glkerns())
 
 c     0 <= nue <= 4;  nue <= 2 if(! inputb)
       if(nue.gt.4 .or. nue.lt.0) call rexit("nue must be in 0..4")
-      if(nue.gt.2 .and. inputb .eq. 0)
+      if(nue.gt.2 .and. .not. inputb)
      +     call rexit("nue must be in 0..2 if not 'inputb'")
       if(n .le. 2) call rexit("n <= 2")
       if(m .lt. 1) call rexit("m < 1")
@@ -53,7 +58,7 @@ c                        ----  <<---     but a short glimpse at coff*() ./auxker
 c                                        reveals how much work would be needed to change this
       kk=(kord-nue)/2
       if(2*kk + nue .ne. kord)        kord=nue+2
-      if(kord.gt.4 .and. inputb .eq. 0) kord=nue+2
+      if(kord.gt.4 .and. .not.inputb) kord=nue+2
       if(kord.gt.6 .or. kord.le.nue)  kord=nue+2
 
       rvar=sig
@@ -65,25 +70,32 @@ c- -Wall (erronously warning if not)
       bmax=1
       ex=1
 
-      if(inputb .ne. 0 .and. b.le.0) inputb=0
+      if(inputb .and. b.le.0) then
+         inputb = .false.
+         inputbI= 0
+      end if
 
-      if(trace .gt. 0) call monit0(0, n, m, nue, kord,
-     +     inputb, isrand, b, trace)
+      if(trace .gt. 0) then
+         call monit0(0, n, m, nue, kord, inputbI, israndI, b, trace)
+      end if
 
 c-------- 2. computation of s-sequence
       if(trace .gt. 0) call monit1(2, trace)
       s0=1.5*t(1)-0.5*t(2)
       sn=1.5*t(n)-0.5*t(n-1)
-      if(s(n).le.s(0)) then ! typically are all = 0., when called from R
+      if(s(n) .le. s(0)) then ! typically are all = 0., when called from R
          inputs= .true.
          do i=1,n-1
             s(i)=.5*(t(i)+t(i+1))
          end do
          s(0)=s0
          s(n)=sn
-         if(inputb .ne. 0 .and. isrand .eq. 0) goto 160
+         if(inputb .and. .not.isrand) then
+            if(trace .gt. 0) call monit2ib(trace)
+            goto 160
+         end if
       else
-         if(inputb .ne. 0) goto 160
+         if(inputb) goto 160
       end if
 c-
 c-------- 3. computation of minimal, maximal allowed global bandwidth
@@ -94,7 +106,9 @@ c-
 c-------- 4. compute tl,tu
       if(trace .gt. 0) call monit1(4, trace)
       itt=0
-40    if (tu.le.tl) then
+ 40   continue
+      if(trace .gt. 0) call monit40(itt, il,iu, tl,tu, trace)
+      if (tu.le.tl) then
         tl=.933*s0+.067*sn
         tu=.067*s0+.933*sn
         itt=itt+1
@@ -164,7 +178,7 @@ c-
 c-------- 9. estimating variance and smoothed pseudoresiduals
       if(trace .gt. 0) call monit1(9, trace)
       rvar=sig ! to become old 'sig'
-      if(hetero .ne. 0) then
+      if(hetero .eq. 1) then
          call resest(t,x,n,wn(1,2),snr,sig)
          bres=max(bmin, .2* dble(nn)**(-.2) * (s(iu)-s(il-1)))
          do i=1,n
@@ -172,9 +186,9 @@ c-------- 9. estimating variance and smoothed pseudoresiduals
             wn(i,2)=wn(i,2)*wn(i,2)
          end do
 c     smooth  (t[i], r[i]^2) , r[]= (leave-one-out interpol.) residual from reset
-         call kernel(t,wn(1,2),n,bres,0,kk2,nyg,s,
-     .        wn(il,3),nn,wn(il,4), trace)
-cc ?? FIXME      ^^          ^^  ./lokerns.f has '1' here instead of 'il'
+         call kernel(t,wn(1,2),n,bres,0,kk2, 0,
+     .        s, wn(il,3),nn,wn(il,4), trace)
+cc ?? FIXME         ^^          ^^  ./lokerns.f has '1' here instead of 'il'
       else !-- not hetero
          if(sig .le. 0.) then
             call resest(t(il),x(il),nn,wn(il,2),r2,sig)
@@ -188,11 +202,11 @@ c-------- 10. [LOOP:] estimate/compute integral constant
       do i=il,iu
          vi=vi+ wn(i,1)*n*(s(i)-s(i-1))**2 * wn(i,4)
       end do
+      if(trace .gt. 0) call monit1c(il,iu, vi, trace)
 c-
 c-------- 11. refinement of s-sequence for random design
-      if(trace .ge. 2) call monit1(11, trace)
-      if(inputs .and. isrand .ne. 0) then
-c      if(inputs .and. isrand) then
+      if(trace .gt. 0) call monit1(11, trace)
+      if(inputs .and. isrand) then
         do i=0,n
           wn(i,5)=dble(i)/dble(n+1)
           wn(i,2)=(dble(i)+.5)/dble(n+1)
@@ -201,28 +215,30 @@ c      if(inputs .and. isrand) then
         exs= -dble(3*kord+1) / dble(6*kord+3)
         exsvi=dble(kord)     / dble(6*kord+3)
         bs=0.1*(vi/(sn-s0)**2)**exsvi * dble(n)**exs
-        call kernel(wn(1,5),t,n,bs,0,2,nyg,wn(0,3),wn(0,2),n+1,s(0),
-     .       trace)
+        call kernel(wn(1,5),t,n,bs,0,2, 0,
+     .       wn(0,3),wn(0,2), n+1, s(0), trace)
+c    MM vvvvvv shouldn't this really happen *after* 111  ??
         vi=0.0
 111     needsrt=.false.
         do i=1,n
            vi=vi+ wn(i,1)*n*(s(i)-s(i-1))**2 * wn(i,4)
-           if(s(i).lt.s(i-1)) then
+           if(s(i).lt.s(i-1)) then ! swap them
               ssi=s(i-1)
               s(i-1)=s(i)
               s(i)=ssi
               needsrt=.true.
            end if
+           if(needsrt .and. trace .gt. 0) call monit111(i, s(i-1),ssi)
         end do
         if(needsrt) goto 111
-        if(inputb .ne. 0) goto 160
+        if(inputb) goto 160
       end if
       b=bmin*2.
 c-
 c-------- 12. compute inflation constant and exponent and loop of iterations
-      if(trace .ge. 2) call monit1(12, trace)
+      if(trace .gt. 0) call monit1(12, trace)
       const=dble(2*nue+1)*fak2(kord)*vark(kk,nue)*vi
-     .       /(dble(2*kord-2*nue)*bias(kk,nue)**2*dble(n))
+     .       / (dble(2*kord-2*nue) * bias(kk,nue)**2 * dble(n))
       fac=1.1*(1.+(nue/10.)+0.05*(kord-nue-2.))
      .       * dble(n)**(2./dble((2*kord+1)*(2*kord+3)))
 
@@ -230,12 +246,14 @@ c     itende=1+2*kord+kord*(2*kord+1)
       itende = (1 + 2*kord) * (1 + kord)
 c     ^^^^^^  *fixed* number of iterations ( <== theory !)
 
+c     ================================ iterations ===============
       do it=1,itende
 c-
 c-------- 13. estimate derivative of order kord in iterations
         if(trace .ge. 3) call monit1(13, trace)
         b2 = min(bmax, max(b*fac, bmin/dble(kord-1)*dble(kord+1)))
-        call kernel(t,x,n,b2,kord,kord+2,nyg,s,w1(1,1),m1,w1(1,3),trace)
+        call kernel(t,x,n,b2,kord,kord+2, 0,
+     .       s, w1(1,1), m1, w1(1,3), trace-2)
 c-
 c-------- 14. estimate integralfunctional in iterations
         if(trace .ge. 3) call monit1(14, trace)
@@ -249,13 +267,16 @@ c-------- 15. finish of iterations
         if(trace .ge. 3) call monit1(15, trace)
         b = min(bmax, max(bmin, (const/xmy2)**ex))
       end do
+c     ====== end iterations -------------------------------------
 
 c-------- 16  compute smoothed function with global plug-in bandwidth
  160  if(trace .ge. 2) call monit1(16, trace)
-      call kernel(t,x,n,b,nue,kord,nyg,s,tt,m,y, trace)
+      call kernel(t,x,n,b,nue,kord, 0,
+     .            s,tt, m,y, trace-1)
+c-
 c-------- 17. variance check
       if(trace .ge. 2) call monit1(17, trace)
-      if(hetero .ne. 0) sig=rvar
+      if(hetero .eq. 1) sig=rvar
       if(sig.eq.rvar .or. r2.lt.0.88 .or. nue.gt.0) goto 222
       ii=0
       iil=0
