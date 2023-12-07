@@ -1,11 +1,11 @@
 1cae7acce4743347154203a2e3c68549 *ChangeLog
-16d5c04eb598c4216e3ffb93756a971e *DESCRIPTION
+75d3c6d9b8e4a25d1073c664b7885772 *DESCRIPTION
 261ea31101d70d0ff7f254254a47b334 *NAMESPACE
 a10efafa333ea559e26e33a5a3678028 *R/glkerns.R
 acc7e58d139a036eb5bfb2c457439cfc *R/lokerns.R
 72021489aa3b3f188d551d3ec334f12d *R/varNPreg.R
 7f8baf16cbc71096086622419aa9c983 *TODO
-ea124a494ad7922985532ad3b308e4d5 *build/partial.rdb
+8faf250d78a120ba4c7ea2186efddd24 *build/partial.rdb
 7bfe6f509f3f78270aa0fc5386a767f5 *data/xSim.R
 5ddd8e6247f6edfbf9b2fef6c2f1e067 *demo/00Index
 ffb4f64e60ebd9b2b6f27b3fe0f8dbe7 *demo/glk-derivs.R

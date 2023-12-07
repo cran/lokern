@@ -1,6 +1,6 @@
 Package: lokern
-Version: 1.1-10
-Date: 2023-02-20
+Version: 1.1-10.1
+Date: 2023-12-07
 Title: Kernel Regression Smoothing with Local or Global Plug-in
         Bandwidth
 Author: Eva Herrmann <eherrmann@mathematik.tu-darmstadt.de> (F77 & S original);
@@ -10,8 +10,13 @@ Imports: grDevices, graphics, stats, utils, sfsmisc (>= 1.0-12)
 Description: Kernel regression smoothing with adaptive local or global plug-in
 	     bandwidth selection.
 BuildResaveData: no
+URL: https://curves-etc.r-forge.r-project.org/,
+        https://r-forge.r-project.org/R/?group_id=846,
+        https://r-forge.r-project.org/scm/viewvc.php/pkg/lokern/?root=curves-etc,
+        svn://svn.r-forge.r-project.org/svnroot/curves-etc/pkg/lokern
+BugReports: https://r-forge.r-project.org/R/?group_id=846
 License: GPL (>= 2)
 NeedsCompilation: yes
-Packaged: 2023-02-20 10:13:43 UTC; maechler
+Packaged: 2023-12-07 15:18:40 UTC; maechler
 Repository: CRAN
-Date/Publication: 2023-02-21 23:00:02 UTC
+Date/Publication: 2023-12-07 16:00:02 UTC
